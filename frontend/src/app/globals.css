@@ -1,0 +1,408 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  
+  --color-status-positive: var(--status-positive);
+  --color-status-danger: var(--status-danger);
+  --color-status-warning: var(--status-warning);
+  --color-critique-accent: var(--critique-accent);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+
+  /* Exact Lovable variables mapped to classes */
+  --color-bg-deep: var(--bg-deep);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-card: var(--bg-card);
+  --color-bg-elev: var(--bg-elev);
+  --color-bg-bubble: var(--bg-bubble);
+
+  --color-border-soft: var(--border-soft);
+  --color-border-mid: var(--border-mid);
+  --color-border-strong: var(--border-strong);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+}
+
+:root {
+  /* Forced Dark Mode for Brutalist UX */
+  --background: #000000;
+  --foreground: #fcfbf8;
+
+  /* Landing page extras (mirrors Lovable) */
+  --bg-deep: #000000;
+  --bg-surface: #0e0e0e;
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --text-primary: #fcfbf8;
+  --text-secondary: #c5c1b9;
+  --text-tertiary: #605d56;
+  --bg-bubble: rgba(255, 255, 255, 0.04);
+  --gradient-halo: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+  --shadow-vault: 0 0 0 1px rgba(0, 0, 0, 0.8), 0 20px 40px rgba(0, 0, 0, 0.6);
+  --transition-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  --card: #0e0e0e;
+  --card-foreground: #fcfbf8;
+  
+  --primary: #fcfbf8;
+  --primary-foreground: #000000;
+  
+  --status-positive: #2e5c3e;
+  --status-danger: #7a2b2b;
+  --status-warning: #b38a36;
+  
+  --critique-accent: #d97706;
+  
+  --muted: #0e0e0e;
+  --muted-foreground: #c5c1b9;
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #fcfbf8;
+  
+  --radius: 12px;
+}
+
+/* Fallback for light mode is identical to dark mode for this specific OS */
+.dark {
+  --background: #000000;
+  --foreground: #fcfbf8;
+  
+  --card: #0e0e0e;
+  --card-foreground: #fcfbf8;
+  
+  --primary: #fcfbf8;
+  --primary-foreground: #000000;
+  
+  --status-positive: #2e5c3e;
+  --status-danger: #7a2b2b;
+  --status-warning: #b38a36;
+  
+  --critique-accent: #d97706;
+  
+  --muted: #0e0e0e;
+  --muted-foreground: #c5c1b9;
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #fcfbf8;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    background-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Shimmer animation (from Lovable .shimmer-text)
+───────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+.shimmer-text {
+  color: #0000;
+  background: linear-gradient(90deg, #636363, #aeaeae, #fff, #aeaeae, #636363) 0 0 / 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: 3s linear infinite shimmer;
+}
+
+/* ─────────────────────────────────────────────
+   Landing page layout & components
+───────────────────────────────────────────── */
+.lp-root {
+  min-height: 100vh;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Subtle radial glow in the background */
+.lp-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255,255,255,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── Header ── */
+.lp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2.5rem;
+  position: relative;
+  z-index: 10;
+}
+
+@media (min-width: 768px) {
+  .lp-header { padding: 1.25rem 2.5rem; }
+}
+
+.lp-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.lp-logo-dot {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #e2e8f0;
+}
+
+.lp-logo-text {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #e2e8f0;
+}
+
+.lp-signin {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+  font-family: var(--font-sans);
+}
+
+.lp-signin:hover { color: #e2e8f0; }
+
+/* ── Hero ── */
+.lp-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1.5rem;
+  text-align: center;
+  position: relative;
+  z-index: 10;
+}
+
+.lp-hero {
+  transition: opacity 1s var(--transition-spring),
+              transform 1s var(--transition-spring);
+}
+
+.lp-headline {
+  font-family: var(--font-sans);
+  font-size: clamp(3rem, 10vw, 7rem);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: #e2e8f0;
+  max-width: 56rem;
+}
+
+.lp-subtext {
+  margin-top: 2rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  max-width: 38rem;
+  margin-inline: auto;
+}
+
+@media (min-width: 768px) {
+  .lp-subtext { font-size: 1.125rem; }
+}
+
+.lp-cta-row {
+  margin-top: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .lp-cta-row { flex-direction: row; }
+}
+
+/* Primary pill button */
+.lp-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.75rem 0.75rem 1.75rem;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  color: #000;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.lp-cta-primary:hover  { transform: scale(1.02); box-shadow: 0 8px 32px rgba(226,232,240,0.15); }
+.lp-cta-primary:active { transform: scale(0.98); }
+
+.lp-cta-icon {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.lp-cta-primary:hover .lp-cta-icon { transform: translateX(2px); }
+
+/* Ghost pill button */
+.lp-cta-ghost {
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.lp-cta-ghost:hover { color: #e2e8f0; }
+
+/* ── Footer ── */
+.lp-footer {
+  padding: 1.5rem 2.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  position: relative;
+  z-index: 10;
+}
+
+/* ─────────────────────────────────────────────
+   CameraPlainVariable custom font
+───────────────────────────────────────────── */
+@font-face {
+  font-family: 'CameraPlainVariable';
+  src: url('https://cdn.gpteng.co/mcp-widgets/v1/fonts/CameraPlainVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-display: 'CameraPlainVariable', var(--font-sans), sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* ─────────────────────────────────────────────
+   Transitions & Animations
+───────────────────────────────────────────── */
+@keyframes shutter {
+  0% {
+    clip-path: inset(0);
+    opacity: 1;
+  }
+  to {
+    clip-path: inset(50% 0);
+    opacity: 0;
+  }
+}
+
+.animate-shutter {
+  animation: shutter .6s var(--transition-spring) forwards;
+}
+
+@keyframes vault-in {
+  0% {
+    opacity: 0;
+    filter: blur(16px);
+    transform: scale(.96) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-vault-in {
+  animation: vault-in .55s var(--transition-spring) forwards;
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up .6s var(--transition-spring) both;
+}
+
+/* ─────────────────────────────────────────────
+   Vault modal background & scrollbar styles
+───────────────────────────────────────────── */
+.glass {
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid var(--border-soft);
+  background: #02020299;
+}
+
+.glass-strong {
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  backdrop-filter: blur(40px) saturate(160%);
+  border: 1px solid var(--border-mid);
+  background: #010101c7;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;  /* Firefox */
+}
