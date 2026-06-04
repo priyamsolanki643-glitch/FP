@@ -107,4 +107,34 @@ export class LLMService {
       throw error;
     }
   }
+
+  /**
+   * Analyzes if a message indicates task completion or failure.
+   */
+  static async classifyMessageOutcome(message: string): Promise<'completed' | 'failed' | 'none'> {
+    try {
+      const prompt = `Analyze the user's message and determine if they are indicating that they completed a task, failed a task, or if this is a general message.
+User Message: "${message}"
+
+You must respond in ONLY JSON format containing exactly one key named 'outcome' with value 'completed', 'failed', or 'none'. Do not include markdown formatting or backticks. Example: {"outcome": "completed"}`;
+      
+      const response = await getAI().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }] as any,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+        }
+      });
+
+      const rawText = response.text;
+      if (!rawText) return 'none';
+      const clean = rawText.trim();
+      const parsed = JSON.parse(clean);
+      return parsed.outcome || 'none';
+    } catch (e) {
+      console.error("Message outcome classification error:", e);
+      return 'none';
+    }
+  }
 }

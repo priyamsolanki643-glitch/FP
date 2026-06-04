@@ -11,10 +11,43 @@ export default function PathSelection() {
   const router = useRouter();
   const [selectedPath, setSelectedPath] = useState<PathType>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isLocking, setIsLocking] = useState(false);
 
-  const lockTrajectory = () => {
-    if (!isConfirmed) return;
-    router.push("/dashboard");
+  const lockTrajectory = async () => {
+    if (!isConfirmed || isLocking) return;
+    setIsLocking(true);
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const payload = {
+        userId: "test-user",
+        missionName: selectedPath === "Alpha" ? "Localized No-Code SME Integration" : "Predictable SaaS Freelance Writing",
+        lockedPath: selectedPath?.toLowerCase() || "beta",
+        probabilityLow: selectedPath === "Alpha" ? 18.4 : 74.2,
+        probabilityHigh: selectedPath === "Alpha" ? 24.0 : 82.5,
+        totalDays: selectedPath === "Alpha" ? 90 : 45,
+        mindsetBrief: selectedPath === "Alpha" 
+          ? "Build localized no-code integration systems for regional SMEs. Zero off-days."
+          : "Targeted freelance technical writing for Series A SaaS startups. No feature creep.",
+        strategyContent: selectedPath === "Alpha"
+          ? "Phase 1: Foundation lock (Day 1–30). Phase 2: Mock war (Day 31–60). Phase 3: Error elimination (Day 61–90)."
+          : "Ship MVP in 21 days. Beta waitlist: 50 users. First paying customer by Day 35. Revenue target: ₹15,000 by Day 45.",
+        chatThreadId: `thread-locked-${selectedPath?.toLowerCase()}-${Date.now()}`
+      };
+      
+      await fetch(`${baseUrl}/api/v1/interaction/lock-trajectory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      
+      // Navigate to '/' where active mission will load and render the dashboard/chat
+      router.push("/");
+    } catch (e) {
+      console.error("Locking trajectory error:", e);
+      router.push("/");
+    } finally {
+      setIsLocking(false);
+    }
   };
 
   return (

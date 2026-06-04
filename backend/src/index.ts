@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
 import { interactionRoutes } from './routes/interaction.routes';
+import { DbService } from './services/db.service';
 
 const app = new Hono();
 
@@ -18,6 +19,9 @@ app.route('/api/v1/interaction', interactionRoutes);
 const port = parseInt(process.env.PORT || '8080', 10);
 
 console.log(`Starting FP-OS Backend on port ${port}...`);
+
+// Initialize database & seeding
+DbService.init().catch(console.error);
 
 serve({
   fetch: app.fetch,

@@ -13,6 +13,22 @@ export default function EntryPoint() {
   const doubleTapRef = useRef(0);
 
   useEffect(() => {
+    const checkActiveMission = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission`);
+        const result = await res.json();
+        if (result?.data) {
+          setIsLocked(true);
+        }
+      } catch (err) {
+        console.error("Failed checking active mission status:", err);
+      }
+    };
+    checkActiveMission();
+  }, []);
+
+  useEffect(() => {
     if (!isLocked) return;
 
     const handlePointerDown = (e: PointerEvent) => {

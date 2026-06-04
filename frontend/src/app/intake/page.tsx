@@ -45,7 +45,8 @@ export default function IntakeTerminal() {
     setIsProcessing(true);
     
     try {
-      const res = await fetch("http://localhost:3001/message", { // Using fully qualified URL for backend port (adjust if next.js proxy is used)
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${baseUrl}/api/v1/interaction/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
