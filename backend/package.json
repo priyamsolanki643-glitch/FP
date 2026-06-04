@@ -1,11 +1,12 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "FP-OS Backend API",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "build": "tsc --skipLibCheck",
+    "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,11 +17,7 @@
     "@google/genai": "^2.7.0",
     "@hono/node-server": "^2.0.4",
     "@hono/zod-validator": "^0.8.0",
-    "@supabase/supabase-js": "^2.106.2",
-    "bullmq": "^5.78.0",
-    "dotenv": "^17.4.2",
     "hono": "^4.12.23",
-    "ioredis": "^5.11.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
