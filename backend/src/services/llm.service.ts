@@ -23,9 +23,11 @@ export class LLMService {
     retries = 3
   ): Promise<any> {
     try {
+      const strictPrompt = systemPrompt + "\n\nIMPORTANT: You must respond in ONLY raw JSON format. Your response MUST be a JSON object containing exactly one key named 'response_text' containing your actual response to the user. Do not include markdown formatting or backticks. Example: {\"response_text\": \"Hello, how can I help?\"}";
+
       const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: systemPrompt,
+        contents: strictPrompt,
         config: {
           responseMimeType: 'application/json',
           temperature: 0.3, // Low temperature for deterministic output
