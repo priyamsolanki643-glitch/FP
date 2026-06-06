@@ -30,6 +30,11 @@ export default function EntryPoint() {
     };
     
     const checkSession = async () => {
+      // Immediately hide landing page if there's a token in the URL
+      if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+        setIsLocked(true);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setIsLocked(true);
