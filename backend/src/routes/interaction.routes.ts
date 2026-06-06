@@ -138,7 +138,7 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
 
         const onboardingInput = {
           userId: actualUserId,
-          geographyTier,
+          geographyTier: geographyTier as any,
           country: geoLower.includes("india") ? "IN" : "US",
           region: extraction.region || 'Unknown',
           liquidCapital: extraction.liquidCapital || 5000,
@@ -147,9 +147,9 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
           debtMonthlyObligation: 0,
           familyDependencyScore: 1.0,
           rawSkillStrings: extraction.rawSkillStrings.length > 0 ? extraction.rawSkillStrings : ["general"],
-          hasVerifiableOutputMap: {},
-          positiveCommSignals: ["clear"],
-          negativeCommSignals: [],
+          hasVerifiableOutputMap: {} as Record<string, boolean>,
+          positiveCommSignals: ["clear"] as string[],
+          negativeCommSignals: [] as string[],
           dailyUninterruptedHours: extraction.dailyUninterruptedHours || 4,
           deviceTier: "mid_range" as const,
           internetStability: "4g_stable" as const,
@@ -173,11 +173,11 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
           targetAmount: (extraction.liquidCapital || 5000) * 2,
           currency: "INR" as const,
           timelineMonths: 3,
-          sacrificesToleratedList: ["sleep"],
-          nonNegotiables: [],
+          sacrificesToleratedList: ["sleep"] as string[],
+          nonNegotiables: [] as string[],
           pathPreference: extraction.pathPreference,
           onboardingText: `Goal: ${extraction.declaredGoal}. Capital: ${extraction.liquidCapital}. Hours: ${extraction.dailyUninterruptedHours}. Geo: ${extraction.region}`,
-          detectedFrictionSignalIds: []
+          detectedFrictionSignalIds: [] as string[]
         };
 
         const simulationData = await processOnboarding(onboardingInput);

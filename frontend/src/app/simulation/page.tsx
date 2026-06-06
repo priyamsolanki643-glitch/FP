@@ -32,7 +32,10 @@ export default function SimulationSequence() {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const res = await fetch(`${baseUrl}/api/v1/interaction/architect`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-user"
+          },
           body: JSON.stringify({
             contextMatrix: diagnosticResult.contextMatrix,
             capabilityVector: diagnosticResult.capabilityVector,

@@ -53,7 +53,10 @@ export default function IntakeTerminal() {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${baseUrl}/api/v1/interaction/message`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-user"
+        },
         body: JSON.stringify({
           message: answer,
           conversationHistory: updatedHistory,
@@ -134,7 +137,10 @@ export default function IntakeTerminal() {
 
         const diagRes = await fetch(`${baseUrl}/api/v1/interaction/diagnostic`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-user"
+          },
           body: JSON.stringify(diagnosticPayload)
         });
         const diagData = await diagRes.json();

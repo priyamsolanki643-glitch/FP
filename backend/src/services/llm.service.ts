@@ -281,7 +281,7 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
    */
   static async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await getAI().models.embedContent({
+      const response = await getBgAI().models.embedContent({
         model: 'text-embedding-004',
         contents: text,
       });
@@ -342,7 +342,7 @@ Extract the parameters and output ONLY a JSON object matching the requested sche
         required: ['isComplete', 'declaredGoal', 'liquidCapital', 'region', 'dailyUninterruptedHours', 'rawSkillStrings', 'pathPreference']
       };
 
-      const response = await getAI().models.generateContent({
+      const response = await getBgAI().models.generateContent({
         model: 'gemini-1.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }] as any,
         config: {

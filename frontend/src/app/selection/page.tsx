@@ -83,7 +83,10 @@ export default function PathSelection() {
       
       const res = await fetch(`${baseUrl}/api/v1/interaction/lock-trajectory`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-user"
+        },
         body: JSON.stringify(payload)
       });
       await res.json();

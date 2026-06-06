@@ -69,7 +69,9 @@ export function ExecutionCockpit() {
     setLoading(true);
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission?userId=test-user`);
+      const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission?userId=test-user`, {
+        headers: { "Authorization": "Bearer test-user" }
+      });
       const result = await res.json();
       
       if (result?.data) {
@@ -97,7 +99,10 @@ export function ExecutionCockpit() {
       
       const res = await fetch(`${baseUrl}/api/v1/interaction/operator/current-tasks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-user"
+        },
         body: JSON.stringify({
           dayNumber: activeMission.dayNumber,
           matrix: diagData.contextMatrix,
@@ -165,7 +170,10 @@ export function ExecutionCockpit() {
 
       const res = await fetch(`${baseUrl}/api/v1/interaction/operator/task`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-user"
+        },
         body: JSON.stringify(payload)
       });
       const result = await res.json();
@@ -223,7 +231,10 @@ export function ExecutionCockpit() {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${baseUrl}/api/v1/interaction/message`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-user"
+        },
         body: JSON.stringify({
           userId: "test-user",
           message: text,

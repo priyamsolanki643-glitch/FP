@@ -19,7 +19,9 @@ export default function EntryPoint() {
     const checkActiveMission = async () => {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission`);
+        const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission`, {
+          headers: { "Authorization": "Bearer test-user" }
+        });
         const result = await res.json();
         if (result?.data) {
           setHasActiveMission(true);
