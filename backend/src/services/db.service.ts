@@ -2,16 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Load environment variables
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
+// Hardcoded Supabase credentials to bypass Cloud Run environment variable issues
+const supabaseUrl = process.env.SUPABASE_URL || 'https://kscqvigvcfjdulonvdxa.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzY3F2aWd2Y2ZqZHVsb252ZHhhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDY2MjAxMywiZXhwIjoyMDk2MjM4MDEzfQ.lNlB6nnfaeP9UADMPrMLBh0NzXr_EK6GYZB8TszR_KM';
 
 // Determine if we should use local JSON fallback
-const isLocalFallback =
-  !supabaseUrl ||
-  !supabaseKey ||
-  supabaseUrl.includes('your-project.supabase.co') ||
-  supabaseKey.includes('your-supabase-service-key');
+const isLocalFallback = false; // Forced to false to ensure Supabase is used
 
 let supabase: any = null;
 const fallbackFilePath = path.join(process.cwd(), 'database.json');

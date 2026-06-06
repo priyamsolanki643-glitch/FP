@@ -50,7 +50,7 @@ export class LLMService {
       };
 
       const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-1.5-flash',
         contents: contents as any,
         config: {
           responseMimeType: 'application/json',
