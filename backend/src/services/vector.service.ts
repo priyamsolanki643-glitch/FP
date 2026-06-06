@@ -216,14 +216,8 @@ export class VectorService {
     for (const seed of seedData) {
       try {
         // Generate pre-seeded memories.
-        // In local mode or during setup, we mock a vector if the AI key fails,
-        // but since we have process.env.AI_PROVIDER_KEY, we will try to make a real call.
+        // In local mode or during setup, we mock a vector to prevent startup API calls
         let embedding: number[] = Array(768).fill(0).map(() => Math.random() - 0.5);
-        try {
-          embedding = await LLMService.generateEmbedding(seed.profile_text);
-        } catch {
-          console.warn('VectorService: Could not generate real embedding for seed, using mock vector.');
-        }
 
         const fullMemory: UserMemory = {
           ...seed,
