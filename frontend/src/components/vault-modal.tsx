@@ -118,13 +118,7 @@ export function VaultModal({ onClose }: VaultModalProps) {
               <Lock className="size-3 text-[#71717a]" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[15px] text-white tracking-tight">Vault</span>
-              <span
-                className="text-[9px] font-mono px-1.5 py-0.5 rounded tracking-[0.15em]"
-                style={{ background: "rgba(255,255,255,0.04)", color: "#71717a" }}
-              >
-                OPERATOR
-              </span>
+              <span className="font-semibold text-[15px] text-white tracking-tight">The Vault</span>
             </div>
             <span className="text-[#27272a] text-sm ml-1 hidden sm:inline">—</span>
             <span className="text-[13px] text-[#52525b] ml-1 hidden sm:inline transition-opacity duration-200">
