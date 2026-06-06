@@ -33,6 +33,25 @@ export default function EntryPoint() {
       // Immediately hide landing page if there's a token in the URL
       if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
         setIsLocked(true);
+        
+        // Manually force Supabase to accept the token
+        try {
+          const hash = window.location.hash.substring(1);
+          const params = new URLSearchParams(hash);
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+          
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            // Clear the ugly hash from the URL
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        } catch (err) {
+          console.error("Hash parsing error:", err);
+        }
       }
 
       const { data: { session } } = await supabase.auth.getSession();
@@ -45,7 +64,10 @@ export default function EntryPoint() {
           if (session) {
             setIsLocked(true);
           } else {
-            setIsLocked(false);
+            // Only lock out if we aren't currently trying to process a hash
+            if (typeof window !== 'undefined' && !window.location.hash.includes('access_token')) {
+              setIsLocked(false);
+            }
           }
         }
       );
