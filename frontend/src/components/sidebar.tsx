@@ -186,7 +186,7 @@ export function Sidebar({ onOpenVault, onSignOut, isOpen, setIsOpen }: SidebarPr
               {(() => {
                 const filteredHistory = historyData.map(g => ({
                   ...g,
-                  chats: g.chats.filter((c: any) => c.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                  chats: g.chats.filter((c: any) => c?.title?.toLowerCase().includes(searchQuery.toLowerCase()))
                 })).filter(g => g.chats.length > 0);
 
                 if (filteredHistory.length === 0) {

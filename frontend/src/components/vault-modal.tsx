@@ -215,7 +215,7 @@ function TabMissions({ onClose }: { onClose: () => void }) {
             fullStrategy: {
               goal: m.missionName,
               motivation: m.mindsetBrief,
-              tasks: m.strategyContent.split('\n').filter((l: string) => l.trim().length > 0),
+              tasks: (m.strategyContent || "Phase 1 initialized.").split('\n').filter((l: string) => l.trim().length > 0),
               executionProtocol: "Refer to the strategy content."
             }
           }]);
