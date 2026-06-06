@@ -64,10 +64,9 @@ export class LLMService {
 
       return JSON.parse(rawText);
     } catch (error: any) {
-      if (error.status === 429 && retries > 0) {
-        console.warn(`LLM Rate limit hit. Retries left: ${retries - 1}. Delaying ${delayMs}ms`);
-        await this.sleep(delayMs);
-        return this.generateValidatedResponse(userId, systemPrompt, conversationHistory, bannedCategories, retries - 1, delayMs * 2);
+      if (error.status === 429) {
+        console.warn(`LLM Rate limit hit. Not retrying to save quota.`);
+        throw new Error("Rate limit exceeded. Please try again in a few seconds.");
       }
       if (retries > 0) {
         console.warn(`LLM Generation failed. Retries left: ${retries - 1}`);
@@ -100,7 +99,7 @@ export class LLMService {
       };
 
       const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-1.5-flash',
         contents: [{ role: 'user', parts: [{ text: researchMandate }] }] as any,
         config: {
           responseMimeType: 'application/json',
@@ -186,7 +185,7 @@ LEGAL SAFETY: You are strictly forbidden from generating any task that constitut
       };
 
       const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-1.5-flash',
         contents: [{ role: 'user', parts: [{ text: strictPrompt }] }] as any,
         config: {
           responseMimeType: 'application/json',
@@ -242,7 +241,7 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       };
 
       const response = await getAI().models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-1.5-flash',
         contents: [{ role: 'user', parts: [{ text: strictPrompt }] }] as any,
         config: {
           responseMimeType: 'application/json',
