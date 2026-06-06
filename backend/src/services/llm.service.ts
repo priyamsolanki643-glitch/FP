@@ -1,28 +1,60 @@
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { ContextMatrix, CapabilityVector } from '../engine/types';
 
-// Lazy clients — created only when first needed
-let _chatAI: GoogleGenAI | null = null;
-let _bgAI: GoogleGenAI | null = null;
+let _aiClients: GoogleGenAI[] = [];
+let _currentClientIndex = 0;
 
-function getChatAI(): GoogleGenAI {
-  if (!_chatAI) {
-    const apiKey = process.env.AI_PROVIDER_KEY || '';
-    _chatAI = new GoogleGenAI({ apiKey });
+function getAIClients(): GoogleGenAI[] {
+  if (_aiClients.length === 0) {
+    const keysStr = process.env.AI_KEYS || process.env.AI_BACKGROUND_KEY || process.env.AI_PROVIDER_KEY || '';
+    const keys = keysStr.split(',').map(k => k.trim()).filter(k => k.length > 0);
+    if (keys.length === 0) {
+      console.warn("No AI API keys provided in environment variables!");
+    }
+    _aiClients = keys.map(k => new GoogleGenAI({ apiKey: k }));
   }
-  return _chatAI;
+  return _aiClients;
 }
 
-function getBgAI(): GoogleGenAI {
-  if (!_bgAI) {
-    const apiKey = process.env.AI_BACKGROUND_KEY || process.env.AI_PROVIDER_KEY || '';
-    _bgAI = new GoogleGenAI({ apiKey });
+function rotateClient() {
+  const clients = getAIClients();
+  if (clients.length > 1) {
+    _currentClientIndex = (_currentClientIndex + 1) % clients.length;
+    console.warn(`[LLM SERVICE] API Key rate limit hit. Rotated to key index: ${_currentClientIndex + 1}/${clients.length}`);
   }
-  return _bgAI;
 }
 
 export class LLMService {
   
+  /**
+   * Universal rotation execution wrapper
+   */
+  private static async executeWithRotation<T>(
+    operation: (client: GoogleGenAI) => Promise<T>,
+    retriesLeft?: number
+  ): Promise<T> {
+    const clients = getAIClients();
+    if (retriesLeft === undefined) {
+      retriesLeft = clients.length; // try each key exactly once
+    }
+
+    try {
+      const client = clients[_currentClientIndex];
+      return await operation(client);
+    } catch (error: any) {
+      if (error.status === 429) {
+        if (retriesLeft > 1) {
+          rotateClient();
+          return this.executeWithRotation(operation, retriesLeft - 1);
+        } else {
+          // All keys exhausted
+          throw new Error("App usage limit hit. Try again after 25 minutes.");
+        }
+      }
+      throw error;
+    }
+  }
+
   /**
    * Exponential backoff helper for rate limits.
    */
@@ -59,15 +91,16 @@ export class LLMService {
         required: ['response_text']
       };
 
-      const aiClient = isBackground ? getBgAI() : getChatAI();
-      const response = await aiClient.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: contents as any,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: responseSchema,
-          temperature: 0.3, 
-        }
+      const response = await this.executeWithRotation(async (aiClient) => {
+        return await aiClient.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: contents as any,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: responseSchema,
+            temperature: 0.3, 
+          }
+        });
       });
 
       const rawText = response.text;
@@ -75,13 +108,15 @@ export class LLMService {
 
       return JSON.parse(rawText);
     } catch (error: any) {
-      if (error.status === 429) {
-        console.warn(`LLM Rate limit hit. Not retrying to save quota.`);
-        throw new Error("Rate limit exceeded. Please try again in a few seconds.");
+      // 429 is now handled inside executeWithRotation, it throws a custom message if all keys fail
+      if (error.message && error.message.includes("App usage limit hit")) {
+        throw error; // Let the custom UI error bubble up
       }
+      
       if (retries > 0) {
         console.warn(`LLM Generation failed. Retries left: ${retries - 1}`);
-        return this.generateValidatedResponse(userId, systemPrompt, conversationHistory, bannedCategories, retries - 1, delayMs, isBackground);
+        await this.sleep(delayMs);
+        return this.generateValidatedResponse(userId, systemPrompt, conversationHistory, bannedCategories, retries - 1, delayMs * 2, isBackground);
       }
       console.error('LLM Generation Error:', error);
       throw error;
@@ -109,15 +144,17 @@ export class LLMService {
         required: ['marketSummary', 'localOpportunities', 'competitorLandscape', 'recommendedAction', 'confidenceScore']
       };
 
-      const response = await getBgAI().models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: [{ role: 'user', parts: [{ text: researchMandate }] }] as any,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: responseSchema,
-          temperature: 0.2,
-          tools: [{ googleSearch: {} }],
-        }
+      const response = await this.executeWithRotation(async (aiClient) => {
+        return await aiClient.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: [{ role: 'user', parts: [{ text: researchMandate }] }] as any,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: responseSchema,
+            temperature: 0.2,
+            tools: [{ googleSearch: {} }],
+          }
+        });
       });
 
       const rawText = response.text;
@@ -125,6 +162,9 @@ export class LLMService {
 
       return JSON.parse(rawText);
     } catch (error: any) {
+      if (error.message && error.message.includes("App usage limit hit")) {
+        throw error;
+      }
       if (retries > 0) {
         console.warn(`LLM Grounding failed. Retries left: ${retries - 1}`);
         await this.sleep(delayMs);
@@ -195,14 +235,16 @@ LEGAL SAFETY: You are strictly forbidden from generating any task that constitut
         }
       };
 
-      const response = await getBgAI().models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: [{ role: 'user', parts: [{ text: strictPrompt }] }] as any,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: responseSchema,
-          temperature: 0.4,
-        }
+      const response = await this.executeWithRotation(async (aiClient) => {
+        return await aiClient.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: [{ role: 'user', parts: [{ text: strictPrompt }] }] as any,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: responseSchema,
+            temperature: 0.4,
+          }
+        });
       });
 
       const rawText = response.text;
@@ -210,6 +252,9 @@ LEGAL SAFETY: You are strictly forbidden from generating any task that constitut
 
       return JSON.parse(rawText);
     } catch (error: any) {
+      if (error.message && error.message.includes("App usage limit hit")) {
+        throw error;
+      }
       if (retries > 0) {
         console.warn(`LLM Task Gen failed. Retries left: ${retries - 1}`);
         await this.sleep(delayMs);
@@ -251,14 +296,16 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
         }
       };
 
-      const response = await getBgAI().models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: [{ role: 'user', parts: [{ text: strictPrompt }] }] as any,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: responseSchema,
-          temperature: 0.4,
-        }
+      const response = await this.executeWithRotation(async (aiClient) => {
+        return await aiClient.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: [{ role: 'user', parts: [{ text: strictPrompt }] }] as any,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: responseSchema,
+            temperature: 0.4,
+          }
+        });
       });
 
       const rawText = response.text;
@@ -266,6 +313,9 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
 
       return JSON.parse(rawText);
     } catch (error: any) {
+      if (error.message && error.message.includes("App usage limit hit")) {
+        throw error;
+      }
       if (retries > 0) {
         console.warn(`LLM Opportunity Gen failed. Retries left: ${retries - 1}`);
         await this.sleep(delayMs);
@@ -281,9 +331,11 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
    */
   static async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await getBgAI().models.embedContent({
-        model: 'text-embedding-004',
-        contents: text,
+      const response = await this.executeWithRotation(async (aiClient) => {
+        return await aiClient.models.embedContent({
+          model: 'text-embedding-004',
+          contents: text,
+        });
       });
       
       if (!response.embeddings || response.embeddings.length === 0 || !response.embeddings[0].values) {
@@ -342,14 +394,16 @@ Extract the parameters and output ONLY a JSON object matching the requested sche
         required: ['isComplete', 'declaredGoal', 'liquidCapital', 'region', 'dailyUninterruptedHours', 'rawSkillStrings', 'pathPreference']
       };
 
-      const response = await getBgAI().models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }] as any,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: responseSchema,
-          temperature: 0.1,
-        }
+      const response = await this.executeWithRotation(async (aiClient) => {
+        return await aiClient.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: [{ role: 'user', parts: [{ text: prompt }] }] as any,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: responseSchema,
+            temperature: 0.3,
+          }
+        });
       });
 
       const rawText = response.text;
