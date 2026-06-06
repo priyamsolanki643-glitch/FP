@@ -30,28 +30,11 @@ export default function EntryPoint() {
     };
     
     const checkSession = async () => {
-      // Immediately hide landing page if there's a token in the URL
+      // If there's an access token in the URL, wait a moment for Supabase to automatically process it
       if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
-        setIsLocked(true);
-        
-        // Manually force Supabase to accept the token
-        try {
-          const hash = window.location.hash.substring(1);
-          const params = new URLSearchParams(hash);
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
-          
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            });
-            // Clear the ugly hash from the URL
-            window.history.replaceState(null, '', window.location.pathname);
-          }
-        } catch (err) {
-          console.error("Hash parsing error:", err);
-        }
+        setIsLocked(true); // Optimistically lock immediately
+        // We do NOT manually parse or clear the hash here. Supabase's internal logic 
+        // needs the hash to be present to verify the session. It will clear it automatically.
       }
 
       const { data: { session } } = await supabase.auth.getSession();
@@ -61,10 +44,11 @@ export default function EntryPoint() {
       
       const { data: authListener } = supabase.auth.onAuthStateChange(
         (event, session) => {
+          console.log("Auth event:", event, session ? "Session exists" : "No session");
           if (session) {
             setIsLocked(true);
           } else {
-            // Only lock out if we aren't currently trying to process a hash
+            // Only lock out if we aren't currently waiting for Supabase to process a hash
             if (typeof window !== 'undefined' && !window.location.hash.includes('access_token')) {
               setIsLocked(false);
             }
