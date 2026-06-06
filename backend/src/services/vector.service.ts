@@ -11,8 +11,12 @@ const isLocalFallback = false;
 let supabase: any = null;
 const fallbackFilePath = path.join(process.cwd(), 'database.json');
 
-if (!isLocalFallback) {
-  supabase = createClient(supabaseUrl, supabaseKey);
+try {
+  if (!isLocalFallback) {
+    supabase = createClient(supabaseUrl, supabaseKey);
+  }
+} catch (error) {
+  console.error("CRITICAL ERROR IN VECTOR_SERVICE INIT:", error);
 }
 
 export interface UserMemory {

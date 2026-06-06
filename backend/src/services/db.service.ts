@@ -12,18 +12,22 @@ const isLocalFallback = false; // Forced to false to ensure Supabase is used
 let supabase: any = null;
 const fallbackFilePath = path.join(process.cwd(), 'database.json');
 
-// Initialize database
-if (!isLocalFallback) {
-  console.log('DB_SERVICE: Connecting to Supabase at', supabaseUrl);
-  supabase = createClient(supabaseUrl, supabaseKey);
-} else {
-  console.log('DB_SERVICE: Running in Local Fallback mode using database.json');
-  if (!fs.existsSync(fallbackFilePath)) {
-    fs.writeFileSync(
-      fallbackFilePath,
-      JSON.stringify({ missions: [], consistency_log: [], market_reports: [] }, null, 2)
-    );
+try {
+  // Initialize database
+  if (!isLocalFallback) {
+    console.log('DB_SERVICE: Connecting to Supabase at', supabaseUrl);
+    supabase = createClient(supabaseUrl, supabaseKey);
+  } else {
+    console.log('DB_SERVICE: Running in Local Fallback mode using database.json');
+    if (!fs.existsSync(fallbackFilePath)) {
+      fs.writeFileSync(
+        fallbackFilePath,
+        JSON.stringify({ missions: [], consistency_log: [], market_reports: [] }, null, 2)
+      );
+    }
   }
+} catch (initError) {
+  console.error("CRITICAL ERROR IN DB_SERVICE INIT:", initError);
 }
 
 // Local Database Helpers
