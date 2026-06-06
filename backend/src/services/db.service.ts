@@ -401,8 +401,16 @@ export class DbService {
   static async deleteChatThread(threadId: string, userId: string): Promise<boolean> {
     if (isLocalFallback) return false;
     
-    // The messages cascade delete if DB is set up that way, otherwise we might need to delete messages first.
-    // Assuming cascade delete is enabled for supabase foreign keys.
+    // Explicitly delete all associated messages first to bypass foreign key constraints
+    const { error: msgError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('thread_id', threadId);
+
+    if (msgError) {
+      console.error('deleteChatThread (messages) DB error:', msgError);
+    }
+
     const { error } = await supabase
       .from('chat_threads')
       .delete()
