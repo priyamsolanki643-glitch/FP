@@ -32,7 +32,7 @@ const messageSchema = z.object({
   })).optional().default([]),
   state_context: z.any().optional(),
   action: z.enum(['onboarding', 'task_update', 'critique', 'unlock']).default('onboarding'),
-  thread_id: z.string().optional()
+  thread_id: z.string().nullable().optional()
 });
 
 // Primary chat/onboarding interaction message handler
