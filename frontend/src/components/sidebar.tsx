@@ -108,8 +108,10 @@ export function Sidebar({ onOpenVault, onSignOut, isOpen, setIsOpen }: SidebarPr
       {isOpen && (
         <div 
           onClick={() => setIsOpen(false)}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            setIsOpen(false);
+          }}
           className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden animate-fade-in-up"
           style={{ animationDuration: '200ms' }}
         />
