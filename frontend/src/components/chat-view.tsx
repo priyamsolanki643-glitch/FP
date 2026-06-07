@@ -369,7 +369,7 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
         
         .input-console-transition:focus-within {
           border-color: #ffffff !important;
-          box-shadow: 0 0 24px rgba(255, 255, 255, 0.15) !important;
+          box-shadow: 0 0 10px rgba(255, 255, 255, 0.12), 0 0 2px rgba(255, 255, 255, 0.25) !important;
         }
 
         /* Action triggers hover dynamics */
