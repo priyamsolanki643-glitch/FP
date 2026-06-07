@@ -253,7 +253,9 @@ export function Sidebar({ onOpenVault, onSignOut, isOpen, setIsOpen }: SidebarPr
                             e.stopPropagation();
                             setActiveChatMenu(activeChatMenu === chat.id ? null : chat.id);
                           }}
-                          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-[#666666] hover:text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-md"
+                          className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 text-[#666666] hover:text-white transition-opacity rounded-md cursor-pointer
+                            opacity-100 md:opacity-0 md:group-hover:opacity-100 ${activeChatMenu === chat.id ? 'md:opacity-100' : ''}
+                          `}
                         >
                           <MoreVertical className="size-3.5" />
                         </button>
