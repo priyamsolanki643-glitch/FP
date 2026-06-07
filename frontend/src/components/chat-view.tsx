@@ -687,10 +687,10 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
 
               <div className="relative flex-1 flex flex-col justify-center min-w-0 min-h-[24px]">
                 {!(isInputFocused || input.length > 0) && (
-                  <div className="absolute inset-y-0 left-1 flex items-center pointer-events-none overflow-hidden h-full">
+                  <div className="absolute inset-y-0 left-1 right-2 flex items-center pointer-events-none overflow-hidden h-full">
                     <span 
                       key={placeholderIndex} 
-                      className="text-[#888888] text-[16px] animate-placeholder whitespace-nowrap"
+                      className="text-[#888888] text-[15px] sm:text-[16px] animate-placeholder whitespace-nowrap truncate w-full"
                     >
                       {placeholders[placeholderIndex]}
                     </span>
