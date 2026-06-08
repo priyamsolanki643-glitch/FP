@@ -553,23 +553,6 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                 </div>
               )}
 
-              {/* Simulation Call-To-Action Banner */}
-              {simulationData && (
-                <div className="border border-cyan-500/20 bg-cyan-500/5 rounded-2xl p-5 mt-6 flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-md animate-message-reveal">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">Strategy Simulations Compiled</h3>
-                    <p className="text-xs text-[#a1a1aa] mt-1">
-                      The AI operator has parsed your circumstances and generated optimal trajectories.
-                    </p>
-                  </div>
-                  <button 
-                    onClick={proceedToSimulation}
-                    className="px-5 py-2 rounded-full bg-white text-black font-semibold text-xs uppercase tracking-wider hover:bg-gray-200 transition-colors cursor-pointer shrink-0"
-                  >
-                    Proceed to Trajectory Audit
-                  </button>
-                </div>
-              )}
             </div>
           )}
 

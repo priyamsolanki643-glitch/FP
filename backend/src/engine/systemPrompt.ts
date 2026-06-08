@@ -157,6 +157,19 @@ export function buildUserContextBlock(runtime: Partial<UserRuntime>): string {
     parts.push('');
   }
 
+  if (runtime.availablePaths && runtime.availablePaths.length > 0) {
+    parts.push('**Available Simulated Paths:**');
+    runtime.availablePaths.forEach((path: any, index: number) => {
+      parts.push(`Path ${index === 0 ? 'Alpha (Path 1)' : 'Beta (Path 2)'}:`);
+      parts.push(`- Opportunity: ${path.opportunityUsed}`);
+      parts.push(`- Description: ${path.description}`);
+      parts.push(`- Convergence Probability: ${path.probabilityRangeLow}% - ${path.probabilityRangeHigh}%`);
+      parts.push(`- Required Sacrifices: ${path.requiredSacrifices?.join(', ') || 'none'}`);
+      parts.push(`- Key Risks: ${path.keyRisks?.join(', ') || 'none'}`);
+    });
+    parts.push('');
+  }
+
   if (runtime.ambitionAssessment) {
     const aa = runtime.ambitionAssessment;
     parts.push(`**Ambition Filter Result:** ${aa.filterResult}`);

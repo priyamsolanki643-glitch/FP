@@ -10,7 +10,8 @@ import {
   processOperatorTaskUpdate,
   processOperatorCritique,
   generateDailyTaskSprint,
-  buildFullSystemPrompt
+  buildFullSystemPrompt,
+  transitionToExecution
 } from '../engine/index';
 import { updateConsistencyScore } from '../engine/layer10_statelock';
 import { runLegalAudit } from '../engine/layer13_legalaudit';
@@ -65,9 +66,10 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
 
     let result: any;
     let systemPrompt = '';
+    let isTransitioningToExecution = false;
     
     // Check if user already has locked mission trajectory in DB
-    const activeMission = await DbService.getActiveMission(actualUserId);
+    let activeMission = await DbService.getActiveMission(actualUserId);
 
     if (activeMission) {
       console.log(`MESSAGE: Found active locked mission for ${actualUserId}. Running execution/critique mode.`);
@@ -84,17 +86,178 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
       systemPrompt = critiqueResult.systemPrompt;
       result = { type: 'critique_response', data: critiqueResult };
     } else {
-      // Onboarding & Diagnostic Chat Mode
-      console.log(`MESSAGE: No active mission for ${actualUserId}. Running onboarding chat.`);
-      systemPrompt = buildFullSystemPrompt('onboarding', {});
-      result = { type: 'chat_response', data: {} };
+      // User has no active mission. Let's see if onboarding is complete!
+      const currentHistory = [...conversationHistory, { role: 'user', parts: [{ text: message }] }] as any;
+      const extraction = await LLMService.extractOnboardingData(currentHistory);
+      
+      if (extraction.isComplete) {
+        // Onboarding parameters are complete!
+        // Check if user is choosing Alpha or Beta
+        const msgClean = message.toLowerCase().trim();
+        const isAlphaChoice = /\b(alpha|path\s*1|option\s*a|1|a)\b/i.test(msgClean);
+        const isBetaChoice = /\b(beta|path\s*2|option\s*b|2|b)\b/i.test(msgClean);
+        
+        if (isAlphaChoice || isBetaChoice) {
+          const chosenPath = isAlphaChoice ? 'alpha' : 'beta';
+          console.log(`MESSAGE: User selected path '${chosenPath}'. Locking trajectory in chat.`);
+          
+          const geoLower = (extraction.region || '').toLowerCase();
+          let geographyTier: 'tier1_city' | 'tier2_city' | 'tier3_city' = 'tier2_city';
+          if (geoLower.match(/delhi|mumbai|bangalore|bengaluru|kolkata|chennai|hyderabad|pune/)) geographyTier = 'tier1_city';
+          else if (geoLower.match(/kanpur|lucknow|jaipur|patna|indore|bhopal|nagpur|agra/)) geographyTier = 'tier2_city';
+          else geographyTier = 'tier3_city';
+
+          const onboardingInput = {
+            userId: actualUserId,
+            geographyTier: geographyTier as any,
+            country: geoLower.includes("india") ? "IN" : "US",
+            region: extraction.region || 'Unknown',
+            liquidCapital: extraction.liquidCapital || 5000,
+            monthlyBurnRate: Math.max(3000, Math.floor((extraction.liquidCapital || 5000) / 4)),
+            hasDebt: false,
+            debtMonthlyObligation: 0,
+            familyDependencyScore: 1.0,
+            rawSkillStrings: extraction.rawSkillStrings && extraction.rawSkillStrings.length > 0 ? extraction.rawSkillStrings : ["general"],
+            hasVerifiableOutputMap: {} as Record<string, boolean>,
+            positiveCommSignals: ["clear"] as string[],
+            negativeCommSignals: [] as string[],
+            dailyUninterruptedHours: extraction.dailyUninterruptedHours || 4,
+            deviceTier: "mid_range" as const,
+            internetStability: "4g_stable" as const,
+            workEnvironment: "dedicated_quiet" as const,
+            canWorkAtNight: true,
+            hasDedicatedWorkspace: true,
+            procrastinationSignals: {
+              tookLongBetweenAnswers: false, setOptimisticDeadlines: false, gavelVagueGoalsNotSpecific: false, mentionedPastFailedAttempts: false, usedPassiveLanguage: false, conflatedPlanningWithExecution: false
+            },
+            cognitiveEnduranceMinutes: 120,
+            emotionalResilience: 0.8,
+            baselineDiscipline: 0.7,
+            preferredWorkStyle: "deep_work_clusters" as const,
+            riskTolerance: 0.6,
+            declaredGoal: extraction.declaredGoal,
+            targetAmount: (extraction.liquidCapital || 5000) * 2,
+            currency: "INR" as const,
+            timelineMonths: 3,
+            sacrificesToleratedList: ["sleep"] as string[],
+            nonNegotiables: [] as string[],
+            pathPreference: chosenPath === 'alpha' ? 'high_risk_upside' as const : 'safe_compounding' as const,
+            onboardingText: `Goal: ${extraction.declaredGoal}. Capital: ${extraction.liquidCapital}. Hours: ${extraction.dailyUninterruptedHours}. Geo: ${extraction.region}`,
+            detectedFrictionSignalIds: [] as string[]
+          };
+
+          const simulationData = await processOnboarding(onboardingInput);
+          const executionResult = await transitionToExecution(simulationData.userRuntime, chosenPath);
+          
+          const targetPath = chosenPath === 'alpha' ? simulationData.pathPresentation.pathAlpha : simulationData.pathPresentation.pathBeta;
+          const missionPayload = {
+            user_id: actualUserId,
+            missionName: targetPath?.opportunityUsed || (chosenPath === 'alpha' ? "Asymmetric Upside Strategy" : "Compounding Strategy"),
+            lockedPath: chosenPath,
+            probabilityLow: targetPath?.probabilityRangeLow || (chosenPath === 'alpha' ? 18.4 : 74.2),
+            probabilityHigh: targetPath?.probabilityRangeHigh || (chosenPath === 'alpha' ? 24.0 : 82.5),
+            dayNumber: 1,
+            totalDays: (targetPath?.timelineMonths || 3) * 30,
+            consistencyScore: 100,
+            streakDays: 0,
+            mindsetBrief: targetPath?.firstStepToday || "Start executing immediate discovery steps.",
+            strategyContent: targetPath?.description || "Compounding action vector.",
+            chatThreadId: currentThreadId
+          };
+
+          await DbService.saveMission(missionPayload);
+          await DbService.addConsistencyLog(actualUserId, 100);
+          
+          activeMission = await DbService.getActiveMission(actualUserId);
+          isTransitioningToExecution = true;
+
+          // Asynchronously generate initial market report on locking
+          const mandate = `
+═══════════════════════════════════════════════════════════════
+FP-OS INTELLIGENCE RESEARCH MANDATE
+User Profile: ${actualUserId}
+Generated: ${new Date().toISOString()}
+═══════════════════════════════════════════════════════════════
+CONTEXT:
+Active Mission: ${activeMission.missionName}
+Locked Path: ${activeMission.lockedPath}
+Total Days: ${activeMission.totalDays}
+
+MANDATE:
+Analyze real-time market opportunities, local gaps, competitor landscape, and timing signals for the target: "${activeMission.missionName}" using the ${activeMission.lockedPath} path.
+Provide hyper-local data for Kanpur, Uttar Pradesh, India if applicable, or general metrics for remote work.
+Ensure the returned JSON perfectly adheres to the MarketIntelligenceReport interface.
+          `.trim();
+          
+          LLMService.generateGroundedIntelligenceReport(mandate).then(async (groundedData) => {
+            await DbService.saveMarketReport(actualUserId, groundedData);
+          }).catch(err => console.error('MARKET_REPORT: Initial generation failed on chat lock:', err));
+
+          systemPrompt = buildFullSystemPrompt('execution', executionResult.updatedRuntime);
+          result = { type: 'trajectory_locked', data: executionResult };
+        } else {
+          // Onboarding complete, but user hasn't made a choice yet. Present simulated paths.
+          const geoLower = (extraction.region || '').toLowerCase();
+          let geographyTier: 'tier1_city' | 'tier2_city' | 'tier3_city' = 'tier2_city';
+          if (geoLower.match(/delhi|mumbai|bangalore|bengaluru|kolkata|chennai|hyderabad|pune/)) geographyTier = 'tier1_city';
+          else if (geoLower.match(/kanpur|lucknow|jaipur|patna|indore|bhopal|nagpur|agra/)) geographyTier = 'tier2_city';
+          else geographyTier = 'tier3_city';
+
+          const onboardingInput = {
+            userId: actualUserId,
+            geographyTier: geographyTier as any,
+            country: geoLower.includes("india") ? "IN" : "US",
+            region: extraction.region || 'Unknown',
+            liquidCapital: extraction.liquidCapital || 5000,
+            monthlyBurnRate: Math.max(3000, Math.floor((extraction.liquidCapital || 5000) / 4)),
+            hasDebt: false,
+            debtMonthlyObligation: 0,
+            familyDependencyScore: 1.0,
+            rawSkillStrings: extraction.rawSkillStrings && extraction.rawSkillStrings.length > 0 ? extraction.rawSkillStrings : ["general"],
+            hasVerifiableOutputMap: {} as Record<string, boolean>,
+            positiveCommSignals: ["clear"] as string[],
+            negativeCommSignals: [] as string[],
+            dailyUninterruptedHours: extraction.dailyUninterruptedHours || 4,
+            deviceTier: "mid_range" as const,
+            internetStability: "4g_stable" as const,
+            workEnvironment: "dedicated_quiet" as const,
+            canWorkAtNight: true,
+            hasDedicatedWorkspace: true,
+            procrastinationSignals: {
+              tookLongBetweenAnswers: false, setOptimisticDeadlines: false, gavelVagueGoalsNotSpecific: false, mentionedPastFailedAttempts: false, usedPassiveLanguage: false, conflatedPlanningWithExecution: false
+            },
+            cognitiveEnduranceMinutes: 120,
+            emotionalResilience: 0.8,
+            baselineDiscipline: 0.7,
+            preferredWorkStyle: "deep_work_clusters" as const,
+            riskTolerance: 0.6,
+            declaredGoal: extraction.declaredGoal,
+            targetAmount: (extraction.liquidCapital || 5000) * 2,
+            currency: "INR" as const,
+            timelineMonths: 3,
+            sacrificesToleratedList: ["sleep"] as string[],
+            nonNegotiables: [] as string[],
+            pathPreference: extraction.pathPreference,
+            onboardingText: `Goal: ${extraction.declaredGoal}. Capital: ${extraction.liquidCapital}. Hours: ${extraction.dailyUninterruptedHours}. Geo: ${extraction.region}`,
+            detectedFrictionSignalIds: [] as string[]
+          };
+
+          const simulationData = await processOnboarding(onboardingInput);
+          systemPrompt = buildFullSystemPrompt('simulation', simulationData.userRuntime);
+          result = { type: 'onboarding_complete', data: simulationData };
+        }
+      } else {
+        // Onboarding is incomplete. Normal onboarding chat prompt.
+        systemPrompt = buildFullSystemPrompt('onboarding', {});
+        result = { type: 'chat_response', data: {} };
+      }
     }
 
     // Call LLM with the generated system prompt from the engine
     let llmResponse = { response_text: "System prompt generated, awaiting LLM..." };
     if (systemPrompt) {
       const enrichedPrompt = systemPrompt + "\n\nINSTRUCTION: Maintain the brutal Sukuna-like Hinglish persona. " + 
-        (activeMission ? "If user explicitly logs a task completion/failure, set task_classification to 'completed' or 'failed'." : "Extract any provided onboarding constraints and set isComplete to true if all are gathered.");
+        (activeMission ? "If user explicitly logs a task completion/failure, set task_classification to 'completed' or 'failed'." : "Extract any onboarding constraints to build context, or prompt user to lock either Option A (Alpha) or Option B (Beta).");
       
       const smartResponse = await LLMService.generateSmartResponse(
         actualUserId, 
@@ -107,7 +270,7 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
       llmResponse.response_text = smartResponse.response_text;
 
       // 1. Handle Task Outcome Logging
-      if (activeMission && smartResponse.task_classification && smartResponse.task_classification !== 'none') {
+      if (activeMission && !isTransitioningToExecution && smartResponse.task_classification && smartResponse.task_classification !== 'none') {
         const classification = smartResponse.task_classification;
         console.log(`MESSAGE: Detected task outcome -> ${classification}. Updating database.`);
         const scoreEvent = classification === 'completed' ? 'task_completed' : 'task_failed';
@@ -126,59 +289,6 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
 
         await DbService.saveMission(updatedMission);
         await DbService.addConsistencyLog(actualUserId, newScore);
-      }
-
-      // 2. Handle Onboarding Completion
-      if (!activeMission && smartResponse.onboarding_data && smartResponse.onboarding_data.isComplete) {
-        const extraction = smartResponse.onboarding_data;
-        console.log(`ONBOARDING: Constraints complete. Running processOnboarding.`);
-        const geoLower = (extraction.region || '').toLowerCase();
-        let geographyTier: 'tier1_city' | 'tier2_city' | 'tier3_city' = 'tier2_city';
-        if (geoLower.match(/delhi|mumbai|bangalore|bengaluru|kolkata|chennai|hyderabad|pune/)) geographyTier = 'tier1_city';
-        else if (geoLower.match(/kanpur|lucknow|jaipur|patna|indore|bhopal|nagpur|agra/)) geographyTier = 'tier2_city';
-        else geographyTier = 'tier3_city';
-
-        const onboardingInput = {
-          userId: actualUserId,
-          geographyTier: geographyTier as any,
-          country: geoLower.includes("india") ? "IN" : "US",
-          region: extraction.region || 'Unknown',
-          liquidCapital: extraction.liquidCapital || 5000,
-          monthlyBurnRate: Math.max(3000, Math.floor((extraction.liquidCapital || 5000) / 4)),
-          hasDebt: false,
-          debtMonthlyObligation: 0,
-          familyDependencyScore: 1.0,
-          rawSkillStrings: extraction.rawSkillStrings && extraction.rawSkillStrings.length > 0 ? extraction.rawSkillStrings : ["general"],
-          hasVerifiableOutputMap: {} as Record<string, boolean>,
-          positiveCommSignals: ["clear"] as string[],
-          negativeCommSignals: [] as string[],
-          dailyUninterruptedHours: extraction.dailyUninterruptedHours || 4,
-          deviceTier: "mid_range" as const,
-          internetStability: "4g_stable" as const,
-          workEnvironment: "dedicated_quiet" as const,
-          canWorkAtNight: true,
-          hasDedicatedWorkspace: true,
-          procrastinationSignals: {
-            tookLongBetweenAnswers: false, setOptimisticDeadlines: false, gavelVagueGoalsNotSpecific: false, mentionedPastFailedAttempts: false, usedPassiveLanguage: false, conflatedPlanningWithExecution: false
-          },
-          cognitiveEnduranceMinutes: 120,
-          emotionalResilience: 0.8,
-          baselineDiscipline: 0.7,
-          preferredWorkStyle: "deep_work_clusters" as const,
-          riskTolerance: 0.6,
-          declaredGoal: extraction.declaredGoal || message,
-          targetAmount: (extraction.liquidCapital || 5000) * 2,
-          currency: "INR" as const,
-          timelineMonths: 3,
-          sacrificesToleratedList: ["sleep"] as string[],
-          nonNegotiables: [] as string[],
-          pathPreference: extraction.pathPreference || 'alpha',
-          onboardingText: `Goal: ${extraction.declaredGoal}. Capital: ${extraction.liquidCapital}. Hours: ${extraction.dailyUninterruptedHours}. Geo: ${extraction.region}`,
-          detectedFrictionSignalIds: [] as string[]
-        };
-
-        const simulationData = await processOnboarding(onboardingInput);
-        result = { type: 'onboarding_complete', data: simulationData };
       }
 
       // Layer 13: Critique/Message LLM Output Audit Interceptor & Disclaimer Appendage
