@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  Lock, X, TrendingUp, CheckCircle, XCircle, Target, ArrowRight, ArrowUpRight, Trophy, AlertTriangle, Radio, ChevronLeft, FileText, Download, Share2
+  Lock, X, TrendingUp, CheckCircle, Target, ArrowRight, ArrowUpRight, Trophy, AlertTriangle, Radio, ChevronLeft, FileText, Download, Share2, HelpCircle
 } from "lucide-react";
 
 type TabId = "missions" | "mirror" | "debt" | "rival" | "market";
@@ -11,12 +11,37 @@ interface VaultModalProps {
   onClose: () => void;
 }
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: "missions", label: "Missions" },
-  { id: "mirror",   label: "Reality Mirror" },
-  { id: "debt",     label: "Execution Debt" },
-  { id: "rival",    label: "Rival Index" },
-  { id: "market",   label: "Market Analyser" },
+const TABS: { id: TabId; label: string; icon: any; desc: string }[] = [
+  { 
+    id: "missions", 
+    label: "Missions", 
+    icon: Target,
+    desc: "Your active strategy, day targets, and daily protocols locked by the engine."
+  },
+  { 
+    id: "mirror",   
+    label: "Reality Mirror", 
+    icon: TrendingUp,
+    desc: "Unfiltered diagnosis of your execution patterns, weaknesses, and weekly consistency trends."
+  },
+  { 
+    id: "debt",     
+    label: "Execution Debt", 
+    icon: AlertTriangle,
+    desc: "Visualizes missed tasks and backlog compounding. Clear debt to maintain progress."
+  },
+  { 
+    id: "rival",    
+    label: "Rival Index", 
+    icon: Trophy,
+    desc: "Anonymous, live comparison against top-performing candidates targeting the same goals."
+  },
+  { 
+    id: "market",   
+    label: "Market Analyser", 
+    icon: Radio,
+    desc: "Live external data feed of test trends, syllabus weightage, and critical timing signals."
+  },
 ];
 
 export function VaultModal({ onClose }: VaultModalProps) {
@@ -86,94 +111,116 @@ export function VaultModal({ onClose }: VaultModalProps) {
     }, 150);
   };
 
+  const activeTabMeta = TABS.find(t => t.id === activeTab);
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 md:p-6">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-hidden">
+      {/* Backdrop with click-to-close */}
       <div
         onClick={onClose}
-        onTouchStart={onClose}
         className="absolute inset-0 cursor-pointer"
         style={{
           background: "rgba(0,0,0,0.85)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
         }}
       />
 
       {/* Modal Container */}
       <div
-        className={`relative w-full max-w-[1100px] h-[90vh] flex flex-col rounded-2xl md:rounded-[24px] overflow-hidden transition-all duration-[400ms] ${
-          mounted ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-[0.97]"
+        className={`relative w-full max-w-[1100px] h-[92vh] sm:h-[88vh] flex flex-col rounded-2xl md:rounded-[24px] overflow-hidden transition-all duration-[400ms] ${
+          mounted ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-[0.98]"
         }`}
         style={{
           background: "#030303",
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 30px 100px -10px rgba(0,0,0,0.9)",
+          boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 30px 100px -10px rgba(0,0,0,0.95)",
           transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       >
-        {/* Full Modal Grid Background */}
+        {/* Futuristic grid overlay background */}
         <div 
-          className="absolute inset-0 pointer-events-none" 
+          className="absolute inset-0 pointer-events-none opacity-20" 
           style={{ 
             backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)", 
-            backgroundSize: "64px 64px" 
+            backgroundSize: "48px 48px" 
           }} 
         />
         
-        {/* Header Section */}
-        <div className="relative z-20 px-6 md:px-10 pt-8 pb-6 border-b border-white/5 flex flex-col">
-          <button 
-            onClick={onClose}
-            className="absolute top-8 right-6 md:right-10 size-8 flex items-center justify-center rounded-full border border-white/10 hover:bg-white/10 transition-colors text-white/70 hover:text-white"
-          >
-            <X className="size-4" />
-          </button>
-
-          <div className="flex items-center gap-4 mb-10">
-            <div className="size-10 rounded-[10px] border border-white/20 flex items-center justify-center bg-black">
-              <Lock className="size-4 text-white/80" />
+        {/* Header Section: Replaced mb-10 with compact layout for mobile */}
+        <div className="relative z-20 px-4 sm:px-6 md:px-10 pt-5 sm:pt-6 md:pt-8 pb-4 border-b border-white/5 flex flex-col bg-[#050505]/95">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="size-8 sm:size-9 rounded-[8px] border border-white/10 flex items-center justify-center bg-black shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                <Lock className="size-3.5 text-white/80" />
+              </div>
+              <div>
+                <div className="text-[9px] font-mono text-[#a1a1aa] tracking-[0.22em] uppercase mb-0.5">FP // ARCHIVE</div>
+                <h1 className="text-base sm:text-lg md:text-xl font-bold text-white tracking-tight">THE VAULT</h1>
+              </div>
             </div>
-            <div>
-              <div className="text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-1">FP // SECURE</div>
-              <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">THE VAULT</h1>
-            </div>
+            
+            <button 
+              onClick={onClose}
+              className="size-8 flex items-center justify-center rounded-full border border-white/5 bg-white/[0.02] hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+            >
+              <X className="size-4" />
+            </button>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mb-2">
-            {TABS.map(tab => (
-              <button 
-                key={tab.id}
-                onClick={() => switchTab(tab.id)}
-                className={`px-4 py-2 rounded-full text-[13px] font-medium transition-colors whitespace-nowrap ${
-                  activeTab === tab.id 
-                    ? 'bg-[#18181b] text-white' 
-                    : 'text-[#a1a1aa] hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* Scrollable Tabs Wrapper with subtle indicator fade */}
+          <div className="relative -mx-4 px-4 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex gap-1.5 md:gap-2">
+              {TABS.map(tab => {
+                const TabIcon = tab.icon;
+                return (
+                  <button 
+                    key={tab.id}
+                    onClick={() => switchTab(tab.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap active:scale-[0.97] ${
+                      activeTab === tab.id 
+                        ? 'bg-white text-black font-bold shadow-[0_0_15px_rgba(255,255,255,0.1)]' 
+                        : 'text-[#a1a1aa] hover:text-white hover:bg-white/5 border border-transparent'
+                    }`}
+                  >
+                    <TabIcon className="size-3.5 shrink-0" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Content Area */}
+        {/* Tab Description Context Header: Tells user what this tab does */}
+        {activeTabMeta && (
+          <div className="px-4 sm:px-6 md:px-10 py-3 bg-[#0a0a0a] border-b border-white/5 flex items-start gap-2.5 relative z-15">
+            <HelpCircle className="size-4 text-[#71717a] shrink-0 mt-0.5" />
+            <p className="text-[11px] sm:text-xs text-[#a1a1aa] leading-snug">
+              <strong className="text-white uppercase font-mono mr-1">{activeTabMeta.label}:</strong> 
+              {activeTabMeta.desc}
+            </p>
+          </div>
+        )}
+
+        {/* Main Content Scroll Area */}
         <div className="flex-1 overflow-y-auto relative z-10 custom-scrollbar">
           <div 
-            className="px-6 md:px-10 py-10 w-full transition-opacity duration-150"
+            className="px-4 sm:px-6 md:px-10 py-6 sm:py-8 w-full transition-opacity duration-150"
             style={{ opacity: tabTransition ? 0 : 1 }}
           >
             {loading ? (
-              <div className="h-[400px] flex items-center justify-center">
-                <div className="size-6 border-2 border-[#52525b] border-t-white rounded-full animate-spin" />
+              <div className="h-[300px] flex flex-col items-center justify-center gap-3">
+                <div className="size-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                <span className="text-[10px] font-mono tracking-widest text-[#71717a] uppercase">Decrypting Logs...</span>
               </div>
             ) : (
-              <>
+              <div className="w-full max-w-5xl mx-auto">
                 {activeTab === "missions" && <TabMissions missionData={vaultData?.mission} />}
                 {activeTab === "mirror" && <TabMirror mirrorData={vaultData?.mirror} />}
                 {activeTab === "debt" && <TabDebt missionData={vaultData?.mission} />}
                 {activeTab === "rival" && <TabRival rivalData={vaultData?.rival} />}
                 {activeTab === "market" && <TabMarket marketData={vaultData?.market} />}
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -220,7 +267,6 @@ function TabMissions({ missionData }: { missionData?: any }) {
         "- Do not attempt to optimize the system. Submit to it."
       ];
     }
-    // Split the dynamic backend string into actionable protocol lines
     return strategyText.split('\n').filter((line: string) => line.trim() !== '');
   };
 
@@ -239,124 +285,109 @@ function TabMissions({ missionData }: { missionData?: any }) {
 
   if (activeMission) {
     return (
-      <div className="w-full max-w-5xl mx-auto h-full min-h-[500px] md:h-[600px] bg-[#0A0A0A] md:border border-white/10 rounded-2xl flex flex-col overflow-hidden animate-fade-in relative shadow-[0_0_80px_-15px_rgba(255,255,255,0.05)] group">
-        {/* Animated Scanning Line */}
-        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none" style={{ animation: 'scan 3s ease-in-out infinite' }} />
-        <style>{`@keyframes scan { 0% { transform: translateY(-10px); } 50% { transform: translateY(600px); } 100% { transform: translateY(-10px); } }`}</style>
-        
-        {/* Subtle grid pattern for the document view */}
-        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+      <div className="w-full bg-[#070707] border border-white/10 rounded-2xl flex flex-col overflow-hidden animate-fade-in relative shadow-[0_0_80px_-15px_rgba(255,255,255,0.03)] group">
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 pointer-events-none opacity-5" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
 
-        {/* Toolbar */}
-        <div className="h-14 bg-[#111] border-b border-white/5 flex items-center justify-between px-6 shrink-0 relative z-30">
+        {/* Toolbar: Responsive buttons */}
+        <div className="h-12 bg-[#121212] border-b border-white/5 flex items-center justify-between px-4 sm:px-6 shrink-0 relative z-30">
           <button 
             onClick={() => setActiveMission(null)}
-            className="flex items-center gap-2 text-[#a1a1aa] hover:text-white transition-colors text-[13px] font-medium"
+            className="flex items-center gap-1 text-[#a1a1aa] hover:text-white transition-colors text-xs font-semibold"
           >
-            <ChevronLeft className="size-4" /> Back to Folders
+            <ChevronLeft className="size-4" /> Folders
           </button>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-1 sm:gap-2">
             <button 
               onClick={handleShare}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-[11px] font-mono tracking-widest uppercase ${isCopied ? 'bg-[#ffffff]/10 text-[#ffffff]' : 'text-[#a1a1aa] hover:text-white hover:bg-white/5'}`}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors text-[10px] font-mono tracking-widest uppercase ${
+                isCopied ? 'bg-white/10 text-white' : 'text-[#a1a1aa] hover:text-white hover:bg-white/5'
+              }`}
             >
               {isCopied ? <CheckCircle className="size-3" /> : <Share2 className="size-3" />}
-              {isCopied ? 'Copied' : 'Share'}
+              <span className="hidden sm:inline">{isCopied ? 'Copied' : 'Share'}</span>
             </button>
             <button 
               onClick={handleDownload}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-[11px] font-mono tracking-widest uppercase ${isDownloaded ? 'bg-white/20 text-white' : 'text-[#a1a1aa] hover:text-white hover:bg-white/5'}`}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors text-[10px] font-mono tracking-widest uppercase ${
+                isDownloaded ? 'bg-white/10 text-white' : 'text-[#a1a1aa] hover:text-white hover:bg-white/5'
+              }`}
             >
               {isDownloaded ? <CheckCircle className="size-3" /> : <Download className="size-3" />}
-              {isDownloaded ? 'Saved' : 'Download'}
+              <span className="hidden sm:inline">{isDownloaded ? 'Saved' : 'Save'}</span>
             </button>
           </div>
         </div>
 
-        {/* Document Content */}
-        <div className="flex-1 overflow-y-auto px-8 md:px-16 py-12 relative z-10 custom-scrollbar">
-          <div className="max-w-3xl mx-auto space-y-10 animate-fade-up">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+        {/* Document Content: Responsive paddings */}
+        <div className="px-5 sm:px-8 md:px-12 py-8 relative z-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
+          <div className="space-y-6 max-w-3xl mx-auto">
+            {/* Folder Header */}
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                    <FileText className="size-5 text-white/80" />
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="size-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                    <FileText className="size-4 text-white/80" />
                   </div>
                   <div>
-                    <div className="text-[10px] font-mono text-[#52525b] tracking-[0.2em] uppercase">Confidential Protocol</div>
-                    <div className="text-[13px] font-mono text-[#a1a1aa]">ID: MS-{activeMission.id}00X9</div>
+                    <div className="text-[8px] font-mono text-[#71717a] tracking-[0.2em] uppercase">Sealed Plan</div>
+                    <div className="text-[11px] font-mono text-[#a1a1aa]">ID: MS-{activeMission.id}00X9</div>
                   </div>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight leading-tight mb-4">{activeMission.title}</h1>
-              </div>
-              <div className="hidden md:flex flex-col items-end">
-                <div className="size-16 rounded-full border border-dashed border-white/20 flex items-center justify-center rotate-12 opacity-40">
-                  <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest -rotate-12">SEALED</span>
-                </div>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                  {activeMission.title}
+                </h1>
               </div>
             </div>
             
-            <div className="h-[1px] w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent my-6" />
+            <div className="h-[1px] w-full bg-gradient-to-r from-white/10 to-transparent" />
 
             {/* Mindset Quote */}
-            <div className="border-l-[3px] border-white/40 pl-6 py-2 relative">
-              <div className="absolute -left-[1.5px] top-0 bottom-0 w-[3px] bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-1000" style={{ boxShadow: '0 0 10px white' }} />
-              <div className="text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-2">Mindset Brief</div>
-              <p className="text-xl md:text-2xl font-medium text-white/90 leading-snug italic tracking-tight">
+            <div className="border-l-[2px] border-white/20 pl-4 py-1.5">
+              <div className="text-[9px] font-mono text-[#71717a] tracking-[0.2em] uppercase mb-1">Mindset Prompt</div>
+              <p className="text-[13px] sm:text-[15px] font-medium text-white/90 leading-relaxed italic">
                 "{activeMission.quote}"
               </p>
             </div>
 
             {/* Core Strategy */}
-            <div className="bg-[#121212] border border-white/5 rounded-2xl p-8 shadow-inner relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5">
-                <Target className="size-24" />
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 sm:p-5 relative overflow-hidden">
+              <div className="text-[9px] font-mono text-[#71717a] tracking-[0.2em] uppercase mb-2 flex items-center gap-1.5">
+                <Target className="size-3 text-white/70" /> Core Strategy
               </div>
-              <div className="text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-4 flex items-center gap-2 relative z-10">
-                <Target className="size-3 text-white" /> Core Strategy
-              </div>
-              <p className="text-[15px] leading-relaxed text-[#d4d4d8] font-medium relative z-10">
+              <p className="text-xs sm:text-[13px] leading-relaxed text-[#d4d4d8]">
                 {activeMission.strategy}
               </p>
             </div>
 
             {/* Detailed Execution Protocol */}
             <div>
-              <div className="text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-6 flex items-center gap-2">
-                <Lock className="size-3 text-white" /> Execution Protocol
+              <div className="text-[9px] font-mono text-[#71717a] tracking-[0.2em] uppercase mb-3 flex items-center gap-1.5">
+                <Lock className="size-3 text-white/70" /> Daily Directives
               </div>
-              <div className="space-y-4 font-mono text-[13px] text-[#a1a1aa] leading-relaxed bg-black/40 p-6 md:p-8 rounded-2xl border border-white/5 relative overflow-hidden">
-                {/* Subtle terminal-like static effect background */}
-                <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, #fff 2px, #fff 4px)' }}></div>
-                <div className="relative z-10">
-                  {activeMission.protocol.map((line: string, i: number) => {
-                    const isHeader = line.includes(':') && !line.startsWith('-');
-                    return (
-                      <div key={i} className={isHeader ? "text-white font-bold pt-4 first:pt-0 pb-1" : "pl-4 hover:text-white transition-colors cursor-default"}>
-                        {line}
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="font-mono text-[11px] sm:text-xs text-[#a1a1aa] leading-relaxed bg-black/60 p-4 rounded-xl border border-white/5 space-y-2">
+                {activeMission.protocol.map((line: string, i: number) => {
+                  const isHeader = line.includes(':') && !line.startsWith('-');
+                  return (
+                    <div key={i} className={isHeader ? "text-white font-bold pt-2 first:pt-0" : "pl-3 hover:text-white transition-colors cursor-default"}>
+                      {line}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Footer Status */}
-            <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Status Footer */}
+            <div className="pt-6 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div>
-                <div className="text-[10px] font-mono text-[#52525b] uppercase tracking-widest mb-1">Current Status</div>
-                <div className="text-white text-[14px]">Day {activeMission.day} of {activeMission.total}</div>
+                <span className="text-[9px] font-mono text-[#52525b] uppercase tracking-widest block mb-0.5">Timeline Progress</span>
+                <span className="text-white font-semibold">Day {activeMission.day} of {activeMission.total}</span>
               </div>
-              <div className="px-4 py-2 bg-[#ffffff]/10 text-[#ffffff] border border-[#ffffff]/20 rounded-lg text-[11px] font-mono uppercase tracking-[0.1em] flex items-center gap-2">
-                <div className="size-1.5 rounded-full bg-[#ffffff] animate-pulse" />
-                {activeMission.consistency}% Consistency maintained
+              <div className="px-3 py-1.5 bg-[#ffffff]/10 text-white border border-[#ffffff]/20 rounded-md text-[10px] font-mono uppercase tracking-[0.05em] flex items-center gap-2 w-fit">
+                <div className="size-1.5 rounded-full bg-white animate-pulse" />
+                {activeMission.consistency}% Consistency Matrix
               </div>
-            </div>
-            
-            {/* Legal Disclaimer */}
-            <div className="text-[9px] font-mono text-[#52525b] uppercase tracking-widest leading-relaxed mt-8 border-t border-white/5 pt-4">
-              <span className="text-red-500 font-bold">LEGAL COMPLIANCE:</span> FP-OS is a strategic executor. All actions, especially related to finance or outreach, must comply with your local legalities. Proceed with responsibility.
             </div>
           </div>
         </div>
@@ -365,41 +396,43 @@ function TabMissions({ missionData }: { missionData?: any }) {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-fade-in w-full max-w-6xl mx-auto">
-      <div className="hidden md:block">
-        <div className="text-[11px] font-mono tracking-[0.2em] text-[#a1a1aa] mb-2 uppercase">Feature 01</div>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">Mission Folders</h2>
-        <p className="text-[#a1a1aa] text-sm md:text-[15px]">Locked paths. Personalised briefs. No fluff — just the next move.</p>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        {missions.map((m, idx) => (
-          <div 
-            key={idx} 
-            onClick={() => setActiveMission(m)}
-            className="group flex items-center justify-between bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 cursor-pointer hover:bg-white/5 hover:border-white/20 transition-all active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-4">
-              <div className="size-10 md:size-12 rounded-full bg-[#18181b] border border-white/10 flex items-center justify-center shrink-0">
-                <Target className="size-5 md:size-6 text-white/70 group-hover:text-white transition-colors" />
-              </div>
-              <div>
-                <h3 className="text-base md:text-lg font-bold text-white tracking-tight leading-tight mb-1">{m.title}</h3>
-                <div className="flex items-center gap-3 text-[11px] md:text-xs font-mono text-[#a1a1aa] uppercase tracking-wider">
-                  <span>Day {m.day}/{m.total}</span>
-                  <span className="size-1 rounded-full bg-[#52525b]" />
-                  <span className={m.consistency >= 80 ? 'text-[#ffffff]' : m.consistency >= 50 ? 'text-yellow-500' : 'text-red-500'}>
-                    {m.consistency}%
-                  </span>
+    <div className="space-y-4 animate-fade-in w-full">
+      {missions.length === 0 ? (
+        <div className="border border-white/5 bg-[#0a0a0a] rounded-2xl py-12 px-6 flex flex-col items-center justify-center text-center">
+          <Target className="size-10 text-[#52525b] mb-4" />
+          <h3 className="text-sm font-bold text-white mb-1">No Active Missions</h3>
+          <p className="text-xs text-[#71717a] max-w-[280px]">Initiate diagnostic check in chat workspace to launch a path.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {missions.map((m, idx) => (
+            <div 
+              key={idx} 
+              onClick={() => setActiveMission(m)}
+              className="group flex items-center justify-between bg-[#070707] border border-white/5 rounded-xl p-3 sm:p-4 cursor-pointer hover:bg-white/[0.04] hover:border-white/10 transition-all active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                  <Target className="size-5 text-white/70 group-hover:text-white transition-colors" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-white tracking-tight leading-none mb-1.5">{m.title}</h3>
+                  <div className="flex items-center gap-2 text-[10px] font-mono text-[#a1a1aa] uppercase tracking-wider">
+                    <span>Day {m.day}/{m.total}</span>
+                    <span className="size-1 rounded-full bg-white/20" />
+                    <span className={m.consistency >= 85 ? 'text-white font-bold' : m.consistency >= 50 ? 'text-yellow-500' : 'text-red-500'}>
+                      {m.consistency}% Acc.
+                    </span>
+                  </div>
                 </div>
               </div>
+              <div className="shrink-0 text-[#52525b] group-hover:text-white transition-colors pl-2">
+                <ArrowRight className="size-4" />
+              </div>
             </div>
-            <div className="shrink-0 text-[#52525b] group-hover:text-white transition-colors">
-              <ArrowRight className="size-5" />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -410,7 +443,6 @@ function TabMirror({ mirrorData }: { mirrorData?: any }) {
     ? mirrorData.history[mirrorData.history.length - 1] 
     : 0;
   
-  // Fill history to 7 points for graph if shorter
   const data = mirrorData?.history ? [...mirrorData.history] : [];
   while(data.length < 7) { data.unshift(data.length > 0 ? data[0] : 50); }
   const graphData = data.slice(-7);
@@ -418,134 +450,106 @@ function TabMirror({ mirrorData }: { mirrorData?: any }) {
   const insight = mirrorData?.insight || "Tu active mode ke paas hai. Bhai rukna mat.";
   const strengths = mirrorData?.strengths || ["Technical velocity is strong", "Goal intent is clear"];
   const bottlenecks = mirrorData?.bottlenecks || ["Consistency decay on weekends", "Outreach loop delay"];
+  
   return (
-    <div className="space-y-8 animate-fade-in w-full max-w-6xl mx-auto">
-      <div>
-        <div className="text-[11px] font-mono tracking-[0.2em] text-[#a1a1aa] mb-2 uppercase">Feature 02</div>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">Reality Mirror</h2>
-        <p className="text-[#a1a1aa] text-sm md:text-[15px]">Honest signal. No filters. The graph doesn't negotiate.</p>
-      </div>
-
-      <div className="flex gap-2">
-        <button 
-          className={`px-4 py-2 rounded-lg text-[13px] font-medium flex items-center gap-1.5 transition-colors ${isTrendUp ? 'bg-[#18181b] text-white' : 'text-[#a1a1aa] hover:bg-[#18181b]'}`}
-        >
-          Trend ↑
-        </button>
-        <button 
-          className={`px-4 py-2 rounded-lg text-[13px] font-medium flex items-center gap-1.5 transition-colors ${!isTrendUp ? 'bg-[#18181b] text-white' : 'text-[#a1a1aa] hover:bg-[#18181b]'}`}
-        >
-          Trend ↓
-        </button>
-      </div>
-
-      <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl p-4 md:p-10">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-10">
+    <div className="space-y-6 animate-fade-in w-full">
+      <div className="bg-[#070707] border border-white/5 rounded-2xl p-4 sm:p-6 md:p-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
           <div>
-            <div className="text-[10px] font-mono text-[#52525b] tracking-[0.2em] uppercase mb-2">Consistency Score · 7 Weeks</div>
-            <div className="text-4xl md:text-6xl font-bold text-white flex items-baseline gap-2 tracking-tighter">
-              {score} <span className="text-lg md:text-2xl text-[#52525b] font-medium tracking-normal">/ 100</span>
+            <div className="text-[9px] font-mono text-[#71717a] tracking-[0.2em] uppercase mb-1">Consistency Metric (7-Week Trend)</div>
+            <div className="text-3xl sm:text-5xl font-extrabold text-white flex items-baseline gap-1.5 tracking-tight">
+              {score} <span className="text-sm sm:text-lg text-[#52525b] font-medium tracking-normal">/ 100</span>
             </div>
           </div>
-          <div className={`px-3 py-1.5 border rounded-md text-[9px] md:text-[10px] font-mono tracking-[0.1em] uppercase flex items-center gap-2 w-fit ${isTrendUp ? 'border-white/20 text-white' : 'border-red-500/20 text-red-500 bg-red-500/10'}`}>
-            {isTrendUp ? (
-              <><ArrowUpRight className="size-3 text-[#a1a1aa]" /> OPERATOR MODE ACTIVATED</>
-            ) : (
-              <>BHAI KYA HO RAHA HAI — YEH WALA TU NAHI HAI</>
-            )}
+          
+          <div className={`px-2.5 py-1 border rounded text-[9px] font-mono tracking-[0.1em] uppercase flex items-center gap-1.5 w-fit ${
+            isTrendUp ? 'border-white/20 text-white bg-white/[0.02]' : 'border-red-500/20 text-red-500 bg-red-500/5'
+          }`}>
+            {isTrendUp ? "OPERATOR MOMENTUM" : "CONSISTENCY RISK DETECTED"}
           </div>
         </div>
 
-        {/* Bar Graph */}
-        <div className="w-full h-[240px] md:h-[280px] relative mt-10 mb-6 flex items-end justify-between px-6 md:px-6">
-          
-          {/* Horizontal Grid lines */}
+        {/* Bar Graph: Made highly responsive, removing labels overlapping */}
+        <div className="w-full h-[180px] sm:h-[220px] relative mt-6 mb-8 flex items-end justify-between px-2 sm:px-6">
           <div className="absolute inset-0 pointer-events-none">
             {[25, 50, 75, 100].map(percent => (
               <div 
                 key={percent} 
-                className="absolute w-full border-b border-white/5 border-dashed" 
+                className="absolute w-full border-b border-white/[0.03] border-dashed" 
                 style={{ bottom: `${percent}%` }}
               />
             ))}
           </div>
 
-          {/* Y Axis Labels */}
-          <div className="absolute left-0 md:-left-4 top-0 bottom-0 flex flex-col justify-between text-[8px] md:text-[10px] text-white font-mono pb-8 z-0">
-            <span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
-          </div>
-
-          {/* Bars */}
-          {(() => {
-            const maxVal = 100;
-            return graphData.reverse().map((val: number, i: number) => {
-              const heightPercent = (val / maxVal) * 100;
-              return (
-                <div key={i} className="relative flex flex-col items-center group w-6 md:w-12 h-full justify-end z-10">
-                  {/* Tooltip on hover */}
-                  <div className="absolute -top-8 bg-[#18181b] border border-white/10 text-white text-[10px] font-mono px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
-                    Score: {val}
-                  </div>
-                  
-                  {/* The Bar */}
-                  <div 
-                    className="w-full rounded-t-sm md:rounded-t-md relative overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:brightness-125"
-                    style={{ 
-                      height: `${heightPercent}%`, 
-                      background: isTrendUp ? 'linear-gradient(to top, rgba(250, 204, 21, 0.2), rgba(250, 204, 21, 0.8))' : 'linear-gradient(to top, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.8))',
-                      boxShadow: `0 0 10px ${isTrendUp ? 'rgba(250, 204, 21, 0.1)' : 'rgba(239, 68, 68, 0.1)'}`
-                    }}
-                  >
-                    {/* Inner glowing top edge */}
-                    <div className={`absolute top-0 left-0 right-0 h-[2px] ${isTrendUp ? 'bg-yellow-300' : 'bg-red-300'}`} style={{ boxShadow: `0 0 10px ${isTrendUp ? 'white' : '#ef4444'}` }} />
-                  </div>
-                  
-                  {/* X Axis Label */}
-                  <div className="absolute -bottom-6 md:-bottom-8 text-[8px] md:text-[10px] text-white font-mono mt-2 transition-colors">
-                    W{i + 1}
-                  </div>
+          {graphData.map((val: number, i: number) => {
+            const heightPercent = Math.max(8, (val / 100) * 100); // minimum height to show bar
+            return (
+              <div key={i} className="relative flex flex-col items-center group w-5 sm:w-10 h-full justify-end z-10">
+                {/* Tooltip */}
+                <div className="absolute -top-7 bg-white text-black font-mono text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none">
+                  {val}%
                 </div>
-              );
-            });
-          })()}
+                
+                {/* The Bar */}
+                <div 
+                  className="w-full rounded-t-[3px] sm:rounded-t-md relative overflow-hidden transition-all duration-300"
+                  style={{ 
+                    height: `${heightPercent}%`, 
+                    background: isTrendUp ? 'linear-gradient(to top, rgba(255,255,255,0.03), rgba(255,255,255,0.85))' : 'linear-gradient(to top, rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.85))',
+                    boxShadow: `0 0 12px ${isTrendUp ? 'rgba(255,255,255,0.05)' : 'rgba(239,68,68,0.1)'}`
+                  }}
+                >
+                  <div className={`absolute top-0 left-0 right-0 h-[1.5px] ${isTrendUp ? 'bg-white' : 'bg-red-400'}`} />
+                </div>
+                
+                {/* X-axis label */}
+                <div className="absolute -bottom-5 text-[8px] sm:text-[9px] font-mono text-[#52525b]">
+                  W{i + 1}
+                </div>
+              </div>
+            );
+          })}
         </div>
         
         {!isTrendUp && (
-          <div className="mt-12 bg-[#120505] border border-red-500/20 rounded-xl p-5">
-            <p className="text-[14px] text-red-400 font-medium leading-relaxed">
-              Yeh numbers teri puri story nahi hain. Day 0 pe tu yahan tha — aaj yahan hai. Direction fix kar.
+          <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-3.5 mt-2">
+            <p className="text-xs text-red-400 font-medium leading-relaxed flex items-start gap-1.5">
+              <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+              Direction is decaying. Fix your weekend targets. The model predicts a drop-off if unchecked.
             </p>
           </div>
         )}
       </div>
 
-      <div className="mt-8 space-y-6">
-        <div className="text-[11px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase">Behavioral Insight</div>
-        <p className="text-white text-[15px] md:text-[18px] leading-relaxed max-w-4xl font-medium tracking-tight">
-          {insight}
+      <div className="space-y-4">
+        <div className="text-[10px] font-mono text-[#71717a] tracking-[0.25em] uppercase">Diagnostic Signal</div>
+        <p className="text-white text-sm sm:text-base leading-relaxed font-semibold">
+          "{insight}"
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-          <div className="border border-white/10 bg-[#0A0A0A] rounded-2xl p-6 md:p-8">
-            <div className="text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-6 flex gap-2"><span className="text-white">PROS</span> · BRUTAL HONEST</div>
-            <ul className="space-y-4 text-[13.5px] text-white leading-relaxed">
+        {/* Strengths & Weaknesses Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div className="border border-white/5 bg-white/[0.01] rounded-xl p-4 sm:p-5">
+            <div className="text-[9px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-4 flex items-center gap-1.5">
+              <span className="size-1 rounded-full bg-white" /> Strengths Detected
+            </div>
+            <ul className="space-y-3 text-xs text-[#d4d4d8] leading-relaxed">
               {strengths.map((s: string, idx: number) => (
-                <li key={idx} className="flex gap-3"><span className="text-[#a1a1aa] shrink-0 mt-0.5">→</span> {s}</li>
+                <li key={idx} className="flex gap-2"><span className="text-[#71717a] shrink-0">·</span> {s}</li>
               ))}
             </ul>
           </div>
-          <div className="border border-red-500/20 bg-[#120505] rounded-2xl p-6 md:p-8">
-            <div className="text-[10px] font-mono text-red-500 tracking-[0.2em] uppercase mb-6 flex gap-2"><span className="text-red-500">CONS</span> · SPECIFIC</div>
-            <ul className="space-y-4 text-[13.5px] text-white leading-relaxed">
+          
+          <div className="border border-red-500/10 bg-red-500/[0.01] rounded-xl p-4 sm:p-5">
+            <div className="text-[9px] font-mono text-red-500 tracking-[0.2em] uppercase mb-4 flex items-center gap-1.5">
+              <span className="size-1 rounded-full bg-red-500" /> Friction Point Matrix
+            </div>
+            <ul className="space-y-3 text-xs text-[#d4d4d8] leading-relaxed">
               {bottlenecks.map((b: string, idx: number) => (
-                <li key={idx} className="flex gap-3"><span className="text-red-500 shrink-0 mt-0.5">→</span> {b}</li>
+                <li key={idx} className="flex gap-2"><span className="text-red-500 shrink-0">·</span> {b}</li>
               ))}
             </ul>
           </div>
-        </div>
-
-        <div className="text-[9px] font-mono text-[#3f3f46] tracking-[0.1em] uppercase pt-4">
-          THIS INSIGHT IS BASED ON YOUR SELF-REPORTED DATA AND CHAT HISTORY WITHIN FP ONLY.
         </div>
       </div>
     </div>
@@ -554,7 +558,7 @@ function TabMirror({ mirrorData }: { mirrorData?: any }) {
 
 function TabDebt({ missionData }: { missionData?: any }) {
   if (!missionData) {
-    return <div className="text-[#a1a1aa] text-center font-mono py-20 animate-pulse text-xs tracking-widest uppercase">Fetching Execution Logs...</div>;
+    return <div className="text-[#a1a1aa] text-center font-mono py-12 animate-pulse text-[10px] tracking-widest uppercase">Syncing debt indices...</div>;
   }
   
   const debtDays = missionData.debtDays || 0;
@@ -562,121 +566,123 @@ function TabDebt({ missionData }: { missionData?: any }) {
   const daysToGoal = missionData.daysToGoal || 0;
   const streakDays = missionData.streakDays || 0;
   const hasDebt = debtDays > 0;
-  return (
-    <div className="space-y-8 animate-fade-in w-full max-w-6xl mx-auto">
-      <div>
-        <div className="text-[11px] font-mono tracking-[0.2em] text-[#a1a1aa] mb-2 uppercase">Feature 03</div>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">Execution Debt</h2>
-        <p className="text-[#a1a1aa] text-sm md:text-[15px]">The market doesn't pause. Your debt compounds — or your consistency does.</p>
-      </div>
 
-      <div className="bg-[#0A0A0A] border border-white/5 rounded-2xl md:rounded-[24px] p-6 md:p-10 mt-8 mb-6 relative overflow-hidden">
-        <div className="flex flex-row justify-between items-center gap-2 md:grid md:grid-cols-3 md:gap-12 z-10 relative">
-          <Dial title="SCORE" value={consistencyScore.toString()} sub="/ 100" color="#facc15" strokeOffset={`${289 - (289 * consistencyScore) / 100}`} />
-          <Dial title="DEBT" value={debtDays.toString()} sub="DAYS" color="#ef4444" strokeOffset={`${289 - (289 * Math.min(debtDays, 14)) / 14}`} />
-          <Dial title="TO GOAL" value={daysToGoal.toString()} sub="DAYS" color="#0ea5e9" strokeOffset={`${289 - (289 * Math.max(0, 90 - daysToGoal)) / 90}`} />
+  return (
+    <div className="space-y-6 animate-fade-in w-full">
+      {/* Metrics Row: Grid layout for responsive sizing */}
+      <div className="bg-[#070707] border border-white/5 rounded-2xl p-4 sm:p-8">
+        <div className="grid grid-cols-3 gap-2 sm:gap-6 w-full max-w-3xl mx-auto">
+          <Dial 
+            title="CONSISTENCY" 
+            value={`${consistencyScore}`} 
+            sub="SCORE" 
+            color="#ffffff" 
+            strokeOffset={`${276 - (276 * consistencyScore) / 100}`} 
+          />
+          <Dial 
+            title="BACKLOG DEBT" 
+            value={`${debtDays}`} 
+            sub="DAYS" 
+            color="#ef4444" 
+            strokeOffset={`${276 - (276 * Math.min(debtDays, 14)) / 14}`} 
+          />
+          <Dial 
+            title="TIMELINE" 
+            value={`${daysToGoal}`} 
+            sub="TO GOAL" 
+            color="#71717a" 
+            strokeOffset={`${276 - (276 * Math.max(0, 90 - daysToGoal)) / 90}`} 
+          />
         </div>
       </div>
 
-      <div className="border border-red-500/20 bg-[#120505] rounded-2xl p-6 md:p-8">
-        <div className="text-[10px] font-mono text-red-500 tracking-[0.2em] uppercase mb-4">DEBT IMPACT</div>
-        <p className="text-[14px] md:text-[15px] text-white leading-relaxed">
-          {hasDebt ? (
-            <>In <span className="text-red-500 font-semibold">{debtDays} dinon</span> mein teri competition ne {debtDays} tasks complete kiye. Market window chhoti ho rahi hai. Tu wahan khada hai jahan tha — duniya aage nikal gayi.</>
-          ) : (
-            <>Teri current execution pe koi debt nahi hai. Perfect consistency record maintained. Stay relentless.</>
-          )}
-        </p>
-      </div>
-
-      <div className="border border-white/10 bg-[#0A0A0A] rounded-2xl p-6 md:p-8">
-        <div className="text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-4">CONSISTENCY WIN</div>
-        <p className="text-[14px] md:text-[15px] text-white leading-relaxed">
-          Tu ne <span className="font-semibold text-white">{streakDays} din lagaataar</span> execute kiya. Yeh skill ab tera permanent weapon hai — koi cheen nahi sakta.
-        </p>
-      </div>
-
-      <div className="mt-12 mb-6">
-        {hasDebt ? (
-          <p className="text-xl md:text-2xl font-semibold text-white leading-snug pl-6 border-l-[3px] border-white py-1 tracking-tight">
-            Duniya nahi ruki bhai — tu ruka tha. Aaj se mat ruk.
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="border border-red-500/10 bg-red-500/[0.01] rounded-xl p-4 sm:p-5">
+          <div className="text-[9px] font-mono text-red-500 tracking-[0.2em] uppercase mb-2">Backlog Analysis</div>
+          <p className="text-xs text-[#d4d4d8] leading-relaxed">
+            {hasDebt ? (
+              <>Your backlog is equivalent to <strong className="text-red-500 font-bold">{debtDays} days</strong> of raw study drift. An average competitor took 0 days off in this phase. Your target needs adjustment.</>
+            ) : (
+              <>No accumulated execution debt. You are keeping up with the batch schedule perfectly. Keep the target locked.</>
+            )}
           </p>
-        ) : (
-          <p className="text-xl md:text-2xl font-semibold text-white leading-snug pl-6 border-l-[3px] border-[#ffffff] py-1 tracking-tight">
-            Operator. No debt. Teri consistency compounding ho rahi hai.
+        </div>
+
+        <div className="border border-white/5 bg-white/[0.01] rounded-xl p-4 sm:p-5">
+          <div className="text-[9px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-2">Streak Multiplier</div>
+          <p className="text-xs text-[#d4d4d8] leading-relaxed">
+            You completed <strong className="text-white font-bold">{streakDays} consecutive</strong> active daily sprints. Consistency triggers a positive habit loop in the brain. Don't break this string.
           </p>
-        )}
-        <p className="text-[9px] font-mono text-[#3f3f46] tracking-[0.1em] uppercase mt-8">
-          METRICS BASED ON YOUR SELF-REPORTED ACTIVITY WITHIN FP ONLY.
-        </p>
+        </div>
       </div>
     </div>
   );
 }
 
 const Dial = ({ title, value, sub, color, strokeOffset }: { title: string, value: string, sub: string, color: string, strokeOffset: string }) => (
-  <div className="flex flex-col items-center justify-center w-full">
-    <div className="relative size-20 md:size-48 mb-4 md:mb-8 mx-auto">
+  <div className="flex flex-col items-center justify-center">
+    <div className="relative size-16 sm:size-28 md:size-36 mb-3">
       <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-        <circle cx="50" cy="50" r="46" fill="none" stroke="#18181b" strokeWidth="3" />
+        <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="4" />
         <circle 
-          cx="50" cy="50" r="46" fill="none" stroke={color} strokeWidth="3" 
-          strokeDasharray="289" strokeDashoffset={strokeOffset} strokeLinecap="round" 
-          style={{ filter: `drop-shadow(0 0 8px ${color}60)` }}
+          cx="50" cy="50" r="44" fill="none" stroke={color} strokeWidth="4" 
+          strokeDasharray="276" strokeDashoffset={strokeOffset} strokeLinecap="round" 
+          style={{ filter: `drop-shadow(0 0 6px ${color}20)` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xl md:text-5xl font-bold text-white mb-0 md:mb-1 tracking-tighter">{value}</span>
-        <span className="text-[8px] md:text-[10px] font-mono text-[#a1a1aa] tracking-widest">{sub}</span>
+        <span className="text-sm sm:text-xl md:text-2xl font-black text-white leading-none mb-0.5">{value}</span>
+        <span className="text-[7px] sm:text-[8px] font-mono text-[#71717a] tracking-wider font-bold">{sub}</span>
       </div>
     </div>
-    <div className="text-[9px] md:text-[10px] font-mono text-[#52525b] tracking-[0.1em] md:tracking-[0.2em] uppercase text-center">{title}</div>
+    <div className="text-[8px] sm:text-[9px] font-mono text-[#52525b] tracking-[0.12em] uppercase text-center font-semibold leading-none">{title}</div>
   </div>
 );
 
 function TabRival({ rivalData }: { rivalData?: any }) {
   if (!rivalData) {
-    return <div className="text-[#a1a1aa] text-center font-mono py-20 animate-pulse text-xs tracking-widest uppercase">Gathering Anonymous Analytics...</div>;
+    return <div className="text-[#a1a1aa] text-center font-mono py-12 animate-pulse text-[10px] tracking-widest uppercase">Connecting to Peer Node...</div>;
   }
   const totalUsers = rivalData.totalUsers || 0;
   const milestonePassed = rivalData.milestonePassedUsers || 0;
   const category = rivalData.category || "your current goal";
+  
   return (
-    <div className="space-y-8 animate-fade-in w-full max-w-6xl mx-auto flex flex-col h-full">
-      <div>
-        <div className="text-[11px] font-mono tracking-[0.2em] text-[#a1a1aa] mb-2 uppercase">Feature 04</div>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">Rival Index</h2>
-        <p className="text-[#a1a1aa] text-sm md:text-[15px]">Anonymous. No names. Just the field — and where you stand in it.</p>
-      </div>
-
-      <div className="flex-1 mt-6 border border-white/5 bg-[#030303] rounded-3xl relative overflow-hidden flex flex-col justify-center p-8 md:p-16 min-h-[400px]">
-        {/* Subtle inner grid lines */}
+    <div className="space-y-4 animate-fade-in w-full">
+      <div className="border border-white/5 bg-[#070707] rounded-2xl relative overflow-hidden p-5 sm:p-8 flex flex-col justify-center min-h-[260px]">
+        {/* Subtle grid background */}
         <div 
-          className="absolute inset-0 pointer-events-none" 
+          className="absolute inset-0 pointer-events-none opacity-20" 
           style={{ 
             backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)", 
-            backgroundSize: "80px 80px",
+            backgroundSize: "60px 60px",
           }} 
         />
 
-        <div className="absolute top-8 right-8 flex items-center gap-2 text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase z-20">
-          <span className="size-1.5 rounded-full bg-white animate-pulse" /> LIVE · ANONYMOUS
+        <div className="absolute top-4 right-4 flex items-center gap-1 text-[8px] font-mono text-[#71717a] tracking-widest uppercase">
+          <span className="size-1 rounded-full bg-white animate-pulse" /> Live Stats
         </div>
 
-        <div className="relative z-10 max-w-3xl space-y-12">
-          <div className="border-b border-white/5 pb-8">
-            <div className="text-[10px] font-mono text-[#52525b] tracking-[0.2em] uppercase mb-4">The Field ({category})</div>
-            <div className="text-2xl md:text-4xl font-bold text-white tracking-tight">Tere jaisa {totalUsers} log same goal pe hain.</div>
+        <div className="relative z-10 space-y-6 max-w-2xl">
+          <div className="border-b border-white/5 pb-4">
+            <div className="text-[8px] font-mono text-[#52525b] tracking-[0.2em] uppercase mb-1.5">Competition Base ({category})</div>
+            <div className="text-sm sm:text-base md:text-lg font-bold text-[#d4d4d8]">
+              There are <strong className="text-white font-bold">{totalUsers} candidates</strong> on this exact same track.
+            </div>
           </div>
-          <div className="border-b border-white/5 pb-8">
-            <div className="text-[10px] font-mono text-[#52525b] tracking-[0.2em] uppercase mb-4">Ahead</div>
-            <div className="text-2xl md:text-4xl font-bold text-white tracking-tight">{milestonePassed} already milestone cross kar gaye.</div>
+          
+          <div className="border-b border-white/5 pb-4">
+            <div className="text-[8px] font-mono text-[#52525b] tracking-[0.2em] uppercase mb-1.5">Frontrunners</div>
+            <div className="text-sm sm:text-base md:text-lg font-bold text-[#d4d4d8]">
+              <strong className="text-white font-bold">{milestonePassed} candidates</strong> have completed more sprints than you.
+            </div>
           </div>
+          
           <div>
-            <div className="text-[10px] font-mono text-red-500 tracking-[0.2em] uppercase mb-4">You</div>
-            <div className="text-2xl md:text-4xl font-bold text-white flex items-center gap-6 tracking-tight">
-              Tu kahan hai? 
-              <div className="h-[2px] w-20 md:w-32 bg-white mt-1 animate-pulse" />
+            <div className="text-[8px] font-mono text-[#52525b] tracking-[0.2em] uppercase mb-2">Your Position</div>
+            <div className="text-sm sm:text-base md:text-lg font-bold text-white flex items-center gap-3">
+              Calculating exact rank...
+              <div className="h-[1px] w-12 bg-white/30 animate-pulse" />
             </div>
           </div>
         </div>
@@ -687,7 +693,7 @@ function TabRival({ rivalData }: { rivalData?: any }) {
 
 function TabMarket({ marketData }: { marketData?: any }) {
   if (!marketData) {
-    return <div className="text-[#a1a1aa] text-center font-mono py-20 animate-pulse text-xs tracking-widest uppercase">Fetching Live Market Intelligence...</div>;
+    return <div className="text-[#a1a1aa] text-center font-mono py-12 animate-pulse text-[10px] tracking-widest uppercase">Connecting market indexes...</div>;
   }
 
   const signals = marketData.skillDemandSignals || [];
@@ -696,33 +702,27 @@ function TabMarket({ marketData }: { marketData?: any }) {
   const insight = marketData.topInsight || "Market is shifting. Stay alert.";
 
   return (
-    <div className="space-y-8 animate-fade-in w-full max-w-6xl mx-auto">
-      <div>
-        <div className="text-[11px] font-mono tracking-[0.2em] text-[#a1a1aa] mb-2 uppercase">Feature 05</div>
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight">Market Analyser</h2>
-        <p className="text-[#a1a1aa] text-sm md:text-[15px]">Live field intel. Window timing. Category movers. The market doesn't wait.</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
+    <div className="space-y-6 animate-fade-in w-full">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1 */}
-        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col hover:border-white/10 transition-colors">
-          <div className="flex justify-between items-center mb-8">
-            <div className="flex items-center gap-2 text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase">
-              <span className="size-1.5 rounded-full bg-white animate-pulse" /> Your Market · Live
+        <div className="bg-[#070707] border border-white/5 rounded-2xl p-4 sm:p-6 flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-1.5 text-[8px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase">
+              <span className="size-1 rounded-full bg-white animate-pulse" /> Subject Weight
             </div>
-            <Radio className="size-4 text-[#52525b]" />
+            <Radio className="size-3 text-[#52525b]" />
           </div>
           
-          <p className="text-[13px] md:text-[14px] text-[#a1a1aa] mb-8 font-medium">Market Demand Signals:</p>
+          <p className="text-[11px] text-[#a1a1aa] mb-4 font-semibold uppercase font-mono">Exam Focus Signals:</p>
 
-          <div className="space-y-6 flex-1">
+          <div className="space-y-4 flex-1">
             {signals.length === 0 ? (
-              <div className="text-[#52525b] text-[13px]">Analyzing incoming signals...</div>
+              <div className="text-[#52525b] text-xs font-mono">Loading data feeds...</div>
             ) : (
               signals.map((signal: any, idx: number) => (
-                <div key={idx} className="flex flex-col pb-4 border-b border-white/5 gap-1">
-                  <span className="text-[13px] md:text-[14px] text-white capitalize">{signal.skillName || signal.name}</span>
-                  <span className="text-[16px] font-bold text-[#ffffff]">{signal.demandLevel || signal.trend}</span>
+                <div key={idx} className="flex flex-col pb-2.5 border-b border-white/5">
+                  <span className="text-xs text-white capitalize font-medium">{signal.skillName || signal.name}</span>
+                  <span className="text-sm font-bold text-[#ffffff]">{signal.demandLevel || signal.trend}</span>
                 </div>
               ))
             )}
@@ -730,55 +730,49 @@ function TabMarket({ marketData }: { marketData?: any }) {
         </div>
 
         {/* Card 2 */}
-        <div className="bg-[#120505] border border-red-500/20 rounded-3xl p-6 md:p-8 flex flex-col relative overflow-hidden">
-          <div className="flex items-center gap-2 text-[10px] font-mono text-red-500 tracking-[0.2em] uppercase mb-8">
-            <AlertTriangle className="size-3" /> Window Alert
+        <div className="bg-red-500/[0.02] border border-red-500/10 rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-h-[180px]">
+          <div className="flex items-center gap-1.5 text-[8px] font-mono text-red-500 tracking-[0.2em] uppercase mb-4">
+            <AlertTriangle className="size-3" /> Time-Window Alert
           </div>
 
-          <div className="mb-8">
-            <div className="text-4xl md:text-5xl font-bold text-red-500 tracking-tighter mb-2">{timing.timeframe}</div>
-            <div className="text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase">Timeframe</div>
+          <div>
+            <div className="text-3xl sm:text-4xl font-extrabold text-red-500 tracking-tight mb-1">{timing.timeframe}</div>
+            <div className="text-[8px] font-mono text-[#71717a] tracking-[0.2em] uppercase">Time remaining</div>
           </div>
 
-          <p className="text-[14px] text-white leading-relaxed mt-auto font-medium">
-            <span className="text-red-500 font-bold uppercase">{timing.urgency} Urgency:</span> {insight} Jo aaj execute karega — woh market ka pehla mover hoga.
+          <p className="text-xs text-[#d4d4d8] leading-relaxed mt-4 font-medium">
+            <strong className="text-red-500 font-bold">{timing.urgency} Action:</strong> {insight}
           </p>
         </div>
 
         {/* Card 3 */}
-        <div className="bg-[#0A0A0A] border border-white/5 rounded-3xl p-6 md:p-8 flex flex-col hover:border-white/10 transition-colors">
-          <div className="flex items-center gap-2 text-[10px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-8">
-            <Trophy className="size-3" /> Local Market Gaps
+        <div className="bg-[#070707] border border-white/5 rounded-2xl p-4 sm:p-6 flex flex-col">
+          <div className="flex items-center gap-1.5 text-[8px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-6">
+            <Trophy className="size-3" /> Practice Gaps
           </div>
           
-          <p className="text-[13px] md:text-[14px] text-[#a1a1aa] mb-8 font-medium">Opportunities you can capture:</p>
+          <p className="text-[11px] text-[#a1a1aa] mb-4 font-semibold uppercase font-mono font-medium">High Margin Chapters:</p>
 
-          <div className="space-y-6 flex-1">
+          <div className="space-y-4 flex-1">
             {gaps.length === 0 ? (
-              <div className="text-[#52525b] text-[13px]">Mapping local gaps...</div>
+              <div className="text-[#52525b] text-xs font-mono">Loading chapters...</div>
             ) : (
               gaps.map((gap: any, idx: number) => (
-                <div key={idx} className="flex flex-col pb-4 border-b border-white/5 gap-1">
-                  <span className="text-[13px] md:text-[14px] text-[#a1a1aa]">{gap.gapDescription}</span>
-                  <span className="text-[11px] font-mono font-bold text-white tracking-widest uppercase">Size: {gap.opportunitySize}</span>
+                <div key={idx} className="flex flex-col pb-2.5 border-b border-white/5">
+                  <span className="text-xs text-[#d4d4d8]">{gap.gapDescription}</span>
+                  <span className="text-[10px] font-mono font-bold text-white uppercase mt-0.5">Size: {gap.opportunitySize}</span>
                 </div>
               ))
             )}
             
-            <div className="pt-2 mt-auto">
-              <div className="w-full bg-[#1A0B0B] border border-red-500/20 rounded-xl p-5 flex justify-between items-center">
-                <span className="text-[12px] font-mono uppercase text-[#a1a1aa] tracking-widest">Readiness</span>
-                <span className="text-2xl font-bold text-red-500 tracking-tight">LOW</span>
+            <div className="pt-2">
+              <div className="w-full bg-[#170909] border border-red-500/10 rounded-xl p-3 flex justify-between items-center">
+                <span className="text-[10px] font-mono uppercase text-[#71717a]">Readiness</span>
+                <span className="text-base font-extrabold text-red-500">LOW</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="mt-10">
-        <p className="text-xl md:text-2xl font-bold text-white leading-snug pl-6 border-l-[3px] border-red-500 py-1 tracking-tight">
-          Market tera wait nahi kar raha. Har din jo tu ghost rehta hai — <span className="text-red-500">koi aur teri jagah le raha hai.</span>
-        </p>
       </div>
     </div>
   );

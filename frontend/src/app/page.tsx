@@ -95,7 +95,16 @@ export default function EntryPoint() {
   }
 
   return (
-    <div className="h-screen w-screen flex bg-black overflow-hidden relative">
+    <div className="h-screen w-screen flex bg-black overflow-hidden relative animate-app-in">
+      <style>{`
+        @keyframes app-in {
+          0% { transform: scale(1.08) translateY(40px); opacity: 0; filter: blur(15px); }
+          100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); }
+        }
+        .animate-app-in {
+          animation: app-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
       <Sidebar 
         isOpen={isSidebarOpen} 
         setIsOpen={setIsSidebarOpen} 

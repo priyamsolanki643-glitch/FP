@@ -10,7 +10,7 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ onLock, hasSession }: LandingPageProps) {
-  const [shutter, setShutter] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const [visible, setVisible] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
 
@@ -21,9 +21,9 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
   const handleStart = () => {
     if (hasSession) {
-      if (!shutter) {
-        setShutter(true);
-        setTimeout(onLock, 560);
+      if (!isExiting) {
+        setIsExiting(true);
+        setTimeout(onLock, 800);
       }
     } else {
       setIsAuthOpen(true);
@@ -32,15 +32,14 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
   const handleAuthSuccess = () => {
     setIsAuthOpen(false);
-    if (!shutter) {
-      setShutter(true);
-      setTimeout(onLock, 560);
+    if (!isExiting) {
+      setIsExiting(true);
+      setTimeout(onLock, 800);
     }
   };
 
   return (
     <div className="lp-root relative min-h-screen bg-black text-white flex flex-col justify-between overflow-hidden select-none font-sans">
-      {shutter && <div className="fixed inset-0 z-50 bg-[#ffffff] animate-shutter" />}
 
       {/* Standard React CSS Injector */}
       <style>{`
@@ -161,10 +160,12 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
       {/* ── Header ── */}
       <header 
-        className="lp-header-reveal flex items-center justify-end px-6 py-5 md:px-12 relative z-10 w-full"
+        className="flex items-center justify-end px-6 py-5 md:px-12 relative z-10 w-full"
         style={{
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(-10px)",
+          transition: "all 800ms cubic-bezier(0.16, 1, 0.3, 1)",
+          opacity: isExiting ? 0 : (visible ? 1 : 0),
+          transform: isExiting ? "translateY(-20px) scale(0.95)" : (visible ? "translateY(0)" : "translateY(-10px)"),
+          filter: isExiting ? "blur(8px)" : "blur(0)",
         }}
       >
         <div className="flex items-center gap-3">
@@ -174,12 +175,14 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
       </header>
 
       {/* ── Hero Main Content ── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 max-w-4xl mx-auto">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 max-w-4xl mx-auto w-full">
         <div 
-          className="lp-hero-reveal flex flex-col items-center"
+          className="flex flex-col items-center w-full"
           style={{
-            opacity: visible ? 1 : 0,
-            transform: visible ? "translateY(0)" : "translateY(20px)",
+            transition: "all 900ms cubic-bezier(0.16, 1, 0.3, 1)",
+            opacity: isExiting ? 0 : (visible ? 1 : 0),
+            transform: isExiting ? "scale(0.85) translateY(-60px)" : (visible ? "scale(1) translateY(0)" : "scale(0.95) translateY(20px)"),
+            filter: isExiting ? "blur(12px)" : "blur(0)",
           }}
         >
           {/* Headline */}
