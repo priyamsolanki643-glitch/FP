@@ -50,10 +50,10 @@ export default function EntryPoint() {
           if (session) {
             setIsLocked(true);
           } else {
-            // Only lock out if we aren't currently waiting for Supabase to process a hash
-            if (typeof window !== 'undefined' && !window.location.hash.includes('access_token')) {
-              setIsLocked(false);
-            }
+            // BYPASS FOR LOCAL TESTING: Don't lock the user out if they have no session
+            // if (typeof window !== 'undefined' && !window.location.hash.includes('access_token')) {
+            //   setIsLocked(false);
+            // }
           }
         }
       );
@@ -65,6 +65,8 @@ export default function EntryPoint() {
 
     checkActiveMission();
     checkSession();
+    // FORCE UNLOCK FOR TESTING:
+    setIsLocked(true);
   }, []);
 
   useEffect(() => {
