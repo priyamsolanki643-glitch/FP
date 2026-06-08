@@ -6,6 +6,7 @@ import { LandingPage } from "@/components/landing-page";
 import { Sidebar } from "@/components/sidebar";
 import { ChatView } from "@/components/chat-view";
 import { VaultModal } from "@/components/vault-modal";
+import { SplashScreen } from "@/components/splash-screen";
 import { Archive } from "lucide-react";
 
 export default function EntryPoint() {
@@ -13,6 +14,7 @@ export default function EntryPoint() {
   const [hasActiveMission, setHasActiveMission] = useState(false);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const doubleTapRef = useRef(0);
 
   useEffect(() => {
@@ -88,6 +90,10 @@ export default function EntryPoint() {
     window.addEventListener("pointerdown", handlePointerDown);
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, [isLocked, isVaultOpen]);
+
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
 
   if (!isLocked) {
     return <LandingPage onLock={() => setIsLocked(true)} />;
