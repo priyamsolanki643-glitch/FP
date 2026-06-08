@@ -128,12 +128,10 @@ export function VaultModal({ onClose }: VaultModalProps) {
 
       {/* Modal Container */}
       <div
-        className={`relative w-full max-w-[1100px] h-[92vh] sm:h-[88vh] flex flex-col rounded-2xl md:rounded-[24px] overflow-hidden transition-all duration-[400ms] ${
+        className={`relative w-full max-w-[1100px] h-[92vh] sm:h-[88vh] flex flex-col rounded-2xl md:rounded-[24px] overflow-hidden transition-all duration-[400ms] glass-vault ${
           mounted ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-[0.98]"
         }`}
         style={{
-          background: "#030303",
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.06), 0 30px 100px -10px rgba(0,0,0,0.95)",
           transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       >
@@ -147,7 +145,7 @@ export function VaultModal({ onClose }: VaultModalProps) {
         />
         
         {/* Header Section: Replaced mb-10 with compact layout for mobile */}
-        <div className="relative z-20 px-4 sm:px-6 md:px-10 pt-5 sm:pt-6 md:pt-8 pb-4 border-b border-white/5 flex flex-col bg-[#050505]/95">
+        <div className="relative z-20 px-4 sm:px-6 md:px-10 pt-5 sm:pt-6 md:pt-8 pb-4 border-b border-white/5 flex flex-col bg-transparent">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="size-8 sm:size-9 rounded-[8px] border border-white/10 flex items-center justify-center bg-black shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
@@ -193,7 +191,7 @@ export function VaultModal({ onClose }: VaultModalProps) {
 
         {/* Tab Description Context Header: Tells user what this tab does */}
         {activeTabMeta && (
-          <div className="px-4 sm:px-6 md:px-10 py-3 bg-[#0a0a0a] border-b border-white/5 flex items-start gap-2.5 relative z-15">
+          <div className="px-4 sm:px-6 md:px-10 py-3 glass-card border-b border-white/5 border-t-0 border-x-0 rounded-none flex items-start gap-2.5 relative z-15">
             <HelpCircle className="size-4 text-[#71717a] shrink-0 mt-0.5" />
             <p className="text-[11px] sm:text-xs text-[#a1a1aa] leading-snug">
               <strong className="text-white uppercase font-mono mr-1">{activeTabMeta.label}:</strong> 
@@ -285,7 +283,7 @@ function TabMissions({ missionData }: { missionData?: any }) {
 
   if (activeMission) {
     return (
-      <div className="w-full bg-[#070707] border border-white/10 rounded-2xl flex flex-col overflow-hidden animate-fade-in relative shadow-[0_0_80px_-15px_rgba(255,255,255,0.03)] group">
+      <div className="w-full glass-card rounded-2xl flex flex-col overflow-hidden animate-fade-in relative group">
         {/* Subtle grid pattern */}
         <div className="absolute inset-0 pointer-events-none opacity-5" style={{ backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
 
@@ -398,7 +396,7 @@ function TabMissions({ missionData }: { missionData?: any }) {
   return (
     <div className="space-y-4 animate-fade-in w-full">
       {missions.length === 0 ? (
-        <div className="border border-white/5 bg-[#0a0a0a] rounded-2xl py-12 px-6 flex flex-col items-center justify-center text-center">
+        <div className="glass-card rounded-2xl py-12 px-6 flex flex-col items-center justify-center text-center">
           <Target className="size-10 text-[#52525b] mb-4" />
           <h3 className="text-sm font-bold text-white mb-1">No Active Missions</h3>
           <p className="text-xs text-[#71717a] max-w-[280px]">Initiate diagnostic check in chat workspace to launch a path.</p>
@@ -409,7 +407,7 @@ function TabMissions({ missionData }: { missionData?: any }) {
             <div 
               key={idx} 
               onClick={() => setActiveMission(m)}
-              className="group flex items-center justify-between bg-[#070707] border border-white/5 rounded-xl p-3 sm:p-4 cursor-pointer hover:bg-white/[0.04] hover:border-white/10 transition-all active:scale-[0.98]"
+              className="group flex items-center justify-between glass-card rounded-xl p-3 sm:p-4 cursor-pointer hover:bg-white/[0.06] hover:border-white/20 transition-all active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
@@ -453,7 +451,7 @@ function TabMirror({ mirrorData }: { mirrorData?: any }) {
   
   return (
     <div className="space-y-6 animate-fade-in w-full">
-      <div className="bg-[#070707] border border-white/5 rounded-2xl p-4 sm:p-6 md:p-8">
+      <div className="glass-card rounded-2xl p-4 sm:p-6 md:p-8">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
           <div>
             <div className="text-[9px] font-mono text-[#71717a] tracking-[0.2em] uppercase mb-1">Consistency Metric (7-Week Trend)</div>
@@ -529,7 +527,7 @@ function TabMirror({ mirrorData }: { mirrorData?: any }) {
 
         {/* Strengths & Weaknesses Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-          <div className="border border-white/5 bg-white/[0.01] rounded-xl p-4 sm:p-5">
+          <div className="glass-card rounded-xl p-4 sm:p-5">
             <div className="text-[9px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-4 flex items-center gap-1.5">
               <span className="size-1 rounded-full bg-white" /> Strengths Detected
             </div>
@@ -570,7 +568,7 @@ function TabDebt({ missionData }: { missionData?: any }) {
   return (
     <div className="space-y-6 animate-fade-in w-full">
       {/* Metrics Row: Grid layout for responsive sizing */}
-      <div className="bg-[#070707] border border-white/5 rounded-2xl p-4 sm:p-8">
+      <div className="glass-card rounded-2xl p-4 sm:p-8">
         <div className="grid grid-cols-3 gap-2 sm:gap-6 w-full max-w-3xl mx-auto">
           <Dial 
             title="CONSISTENCY" 
@@ -649,7 +647,7 @@ function TabRival({ rivalData }: { rivalData?: any }) {
   
   return (
     <div className="space-y-4 animate-fade-in w-full">
-      <div className="border border-white/5 bg-[#070707] rounded-2xl relative overflow-hidden p-5 sm:p-8 flex flex-col justify-center min-h-[260px]">
+      <div className="glass-card rounded-2xl relative overflow-hidden p-5 sm:p-8 flex flex-col justify-center min-h-[260px]">
         {/* Subtle grid background */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-20" 
@@ -705,7 +703,7 @@ function TabMarket({ marketData }: { marketData?: any }) {
     <div className="space-y-6 animate-fade-in w-full">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1 */}
-        <div className="bg-[#070707] border border-white/5 rounded-2xl p-4 sm:p-6 flex flex-col">
+        <div className="glass-card rounded-2xl p-4 sm:p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-1.5 text-[8px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase">
               <span className="size-1 rounded-full bg-white animate-pulse" /> Subject Weight
@@ -746,7 +744,7 @@ function TabMarket({ marketData }: { marketData?: any }) {
         </div>
 
         {/* Card 3 */}
-        <div className="bg-[#070707] border border-white/5 rounded-2xl p-4 sm:p-6 flex flex-col">
+        <div className="glass-card rounded-2xl p-4 sm:p-6 flex flex-col">
           <div className="flex items-center gap-1.5 text-[8px] font-mono text-[#a1a1aa] tracking-[0.2em] uppercase mb-6">
             <Trophy className="size-3" /> Practice Gaps
           </div>

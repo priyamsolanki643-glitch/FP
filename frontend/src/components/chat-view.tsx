@@ -408,7 +408,13 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center -mr-1">
+        <div className="flex items-center gap-2 -mr-1">
+          <button 
+            className="p-2 text-[#a1a1aa] hover:text-[#f4f4f5] active:scale-90 transition-all cursor-pointer"
+            title="Settings"
+          >
+            <Cpu className="size-5" />
+          </button>
           <button 
             onClick={() => window.dispatchEvent(new Event('new-thread'))}
             className="p-2 text-[#ffffff] hover:text-[#f4f4f5] active:scale-90 transition-all cursor-pointer drop-shadow-[0_0_12px_rgba(255, 255, 255,0.6)]"
@@ -510,14 +516,13 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
               {/* Loader */}
               {isThinking && (
                 <div className="flex justify-start animate-message-reveal">
-                  <div className="flex items-center gap-3 p-3 w-fit rounded-2xl text-[#888888] text-[14px]">
-                    <div className="relative w-3 h-3 animate-[spin_1.5s_linear_infinite]">
-                      <span className="absolute top-0 left-0 size-1.5 rounded-full bg-[#ffffff]/60" />
-                      <span className="absolute bottom-0 right-0 size-1.5 rounded-full bg-[#ffffff]/60" />
+                  <div className="flex items-center gap-3 p-3 w-fit">
+                    <div className="flex flex-col gap-2">
+                      <div className="h-[1px] w-16 bg-gradient-to-r from-transparent via-[#ffffff] to-transparent animate-[pulse_1.5s_ease-in-out_infinite] opacity-70"></div>
+                      <span className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#888888] animate-pulse">
+                        {loadingPhrases[loadingPhraseIndex]}
+                      </span>
                     </div>
-                    <span className="font-mono text-xs text-[#a1a1aa] tracking-wide animate-pulse">
-                      {loadingPhrases[loadingPhraseIndex]}
-                    </span>
                   </div>
                 </div>
               )}
