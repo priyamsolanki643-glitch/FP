@@ -23,7 +23,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
     if (hasSession) {
       if (!isExiting) {
         setIsExiting(true);
-        setTimeout(onLock, 800);
+        setTimeout(onLock, 500);
       }
     } else {
       setIsAuthOpen(true);
@@ -34,7 +34,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
     setIsAuthOpen(false);
     if (!isExiting) {
       setIsExiting(true);
-      setTimeout(onLock, 800);
+      setTimeout(onLock, 500);
     }
   };
 
@@ -162,10 +162,10 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
       <header 
         className="flex items-center justify-end px-6 py-5 md:px-12 relative z-10 w-full"
         style={{
-          transition: "all 800ms cubic-bezier(0.16, 1, 0.3, 1)",
+          transition: "transform 500ms cubic-bezier(0.16, 1, 0.3, 1), opacity 500ms cubic-bezier(0.16, 1, 0.3, 1)",
           opacity: isExiting ? 0 : (visible ? 1 : 0),
-          transform: isExiting ? "translateY(-20px) scale(0.95)" : (visible ? "translateY(0)" : "translateY(-10px)"),
-          filter: isExiting ? "blur(8px)" : "blur(0)",
+          transform: isExiting ? "translate3d(0, -20px, 0) scale(0.95)" : (visible ? "translate3d(0, 0, 0) scale(1)" : "translate3d(0, -10px, 0) scale(0.98)"),
+          willChange: "transform, opacity",
         }}
       >
         <div className="flex items-center gap-3">
@@ -179,10 +179,10 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
         <div 
           className="flex flex-col items-center w-full"
           style={{
-            transition: "all 900ms cubic-bezier(0.16, 1, 0.3, 1)",
+            transition: "transform 600ms cubic-bezier(0.16, 1, 0.3, 1), opacity 600ms cubic-bezier(0.16, 1, 0.3, 1)",
             opacity: isExiting ? 0 : (visible ? 1 : 0),
-            transform: isExiting ? "scale(0.85) translateY(-60px)" : (visible ? "scale(1) translateY(0)" : "scale(0.95) translateY(20px)"),
-            filter: isExiting ? "blur(12px)" : "blur(0)",
+            transform: isExiting ? "scale(0.85) translate3d(0, -60px, 0)" : (visible ? "scale(1) translate3d(0, 0, 0)" : "scale(0.95) translate3d(0, 20px, 0)"),
+            willChange: "transform, opacity",
           }}
         >
           {/* Headline */}

@@ -42,8 +42,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           animation: track-in 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         @keyframes track-in {
-          0% { letter-spacing: -0.05em; transform: scale(0.95); filter: blur(10px); opacity: 0; }
-          100% { letter-spacing: -0.02em; transform: scale(1); filter: blur(0px); opacity: 1; }
+          0% { letter-spacing: -0.05em; transform: scale(0.85); opacity: 0; }
+          100% { letter-spacing: -0.02em; transform: scale(1); opacity: 1; }
         }
         
         .orb-expand {

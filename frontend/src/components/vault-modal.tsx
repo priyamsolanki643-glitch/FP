@@ -275,7 +275,7 @@ function TabMissions({ missionData }: { missionData?: any }) {
       id: 1,
       title: missionData.missionName || "Active Mission",
       quote: missionData.mindsetBrief || "Tu average nahi hai. Execute kar.",
-      strategy: "Follow the locked path. Execute daily targets without fail.",
+      strategy: missionData.coreStrategy || "Follow the locked path. Execute daily targets without fail.",
       protocol: parseProtocol(missionData.strategyContent, missionData.lockedPath),
       day: missionData.dayNumber || 1,
       total: missionData.totalDays || 90,
