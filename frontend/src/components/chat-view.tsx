@@ -27,8 +27,7 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
   const [isThinking, setIsThinking] = useState(false);
   const [greeting, setGreeting] = useState({ text: "Hi bro", accent: "execution kiya ?", animateAccent: true });
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
-  const [attachMenuState, setAttachMenuState] = useState<"main" | "models">("main");
-  const [selectedModel, setSelectedModel] = useState("FP Pro");
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
@@ -43,10 +42,10 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
   ];
 
   const loadingPhrases = [
-    "Analyzing market dynamics...",
-    "Extracting constraints...",
-    "Formulating strategy...",
-    "Optimizing execution paths..."
+    "Researching...",
+    "Analyzing...",
+    "Observing...",
+    "Synthesizing..."
   ];
 
   // Placeholder rotation
@@ -516,13 +515,16 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
               {/* Loader */}
               {isThinking && (
                 <div className="flex justify-start animate-message-reveal">
-                  <div className="flex items-center gap-3 p-3 w-fit">
-                    <div className="flex flex-col gap-2">
-                      <div className="h-[1px] w-16 bg-gradient-to-r from-transparent via-[#ffffff] to-transparent animate-[pulse_1.5s_ease-in-out_infinite] opacity-70"></div>
-                      <span className="font-sans text-[11px] uppercase tracking-[0.2em] text-[#888888] animate-pulse">
-                        {loadingPhrases[loadingPhraseIndex]}
-                      </span>
+                  <div className="flex items-center gap-3.5 p-3 w-fit">
+                    <div className="relative size-5 animate-[spin_1.5s_linear_infinite]">
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 size-[5px] rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 size-[5px] rounded-full bg-white/40" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 size-[5px] rounded-full bg-white/60" />
+                      <span className="absolute right-0 top-1/2 -translate-y-1/2 size-[5px] rounded-full bg-white/20" />
                     </div>
+                    <span className="font-sans text-[12px] tracking-[0.05em] text-[#a1a1aa] animate-pulse">
+                      {loadingPhrases[loadingPhraseIndex]}
+                    </span>
                   </div>
                 </div>
               )}
@@ -565,13 +567,7 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
               <button
                 type="button"
                 onClick={() => {
-                  if (isAttachMenuOpen) {
-                    setIsAttachMenuOpen(false);
-                    setTimeout(() => setAttachMenuState("main"), 200); // reset state after close animation
-                  } else {
-                    setIsAttachMenuOpen(true);
-                    setAttachMenuState("main");
-                  }
+                  setIsAttachMenuOpen(!isAttachMenuOpen);
                 }}
                 className={`size-10 rounded-full grid place-items-center transition-all duration-200 cursor-pointer active:scale-90 active:bg-white/10 ${isAttachMenuOpen ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-[#a1a1aa] hover:text-white'}`}
                 title="Attach"
@@ -581,78 +577,30 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
 
               {/* Attachment Menu Popover */}
               {isAttachMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-4 bg-[#1a1b1e] border border-white/5 rounded-[24px] p-2 flex flex-col shadow-2xl min-w-[200px] animate-scale-in origin-bottom-left z-50 overflow-hidden">
-                  
-                  {attachMenuState === "main" ? (
-                    <div className="flex flex-col gap-1 animate-fade-in">
-                      <button 
-                        onClick={() => { cameraInputRef.current?.click(); setIsAttachMenuOpen(false); }}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-[#d4d4d8] hover:text-white transition-colors text-[14px] text-left cursor-pointer"
-                      >
-                        <Camera className="size-[18px]" />
-                        <span>Camera</span>
-                      </button>
-                      <button 
-                        onClick={() => { photosInputRef.current?.click(); setIsAttachMenuOpen(false); }}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-[#d4d4d8] hover:text-white transition-colors text-[14px] text-left cursor-pointer"
-                      >
-                        <Image className="size-[18px]" />
-                        <span>Photos</span>
-                      </button>
-                      <button 
-                        onClick={() => { fileInputRef.current?.click(); setIsAttachMenuOpen(false); }}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-[#d4d4d8] hover:text-white transition-colors text-[14px] text-left cursor-pointer"
-                      >
-                        <Paperclip className="size-[18px]" />
-                        <span>Files</span>
-                      </button>
-
-                      <div className="h-px bg-white/5 my-1" />
-
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setAttachMenuState("models"); }}
-                        className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/5 text-[#ffffff] transition-colors text-[14px] text-left cursor-pointer group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Cpu className="size-[18px]" />
-                          <span>AI Models</span>
-                        </div>
-                        <ChevronRight className="size-[18px] text-[#ffffff]/50 group-hover:text-[#ffffff]" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col w-[260px] animate-fade-in">
-                      <div className="flex items-center gap-2 px-2 pb-2 mb-1 border-b border-white/5">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setAttachMenuState("main"); }}
-                          className="size-7 grid place-items-center rounded-full hover:bg-white/10 text-white cursor-pointer"
-                        >
-                          <ChevronLeft className="size-5" />
-                        </button>
-                        <span className="text-[13px] font-semibold text-[#a1a1aa] uppercase tracking-wider">Select Model</span>
-                      </div>
-                      
-                      <div className="flex flex-col gap-1 mt-1">
-                        {[
-                          { name: "FP Go", desc: "Constraint scanning and runway calibration." },
-                          { name: "FP Pro", desc: "Pathway planning and strategy simulation." },
-                          { name: "FP Elite", desc: "Execution monitoring and streak retention." }
-                        ].map((model) => (
-                          <button 
-                            key={model.name}
-                            onClick={() => { setSelectedModel(model.name); setIsAttachMenuOpen(false); setTimeout(() => setAttachMenuState("main"), 200); }}
-                            className="flex flex-col px-3 py-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer text-left group"
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <span className={`text-[14px] font-medium ${selectedModel === model.name ? 'text-[#ffffff]' : 'text-white'}`}>{model.name}</span>
-                              {selectedModel === model.name && <div className="size-1.5 rounded-full bg-[#ffffff] shadow-[0_0_8px_rgba(255, 255, 255,0.6)]" />}
-                            </div>
-                            <span className="text-[12px] text-[#888888] leading-snug mt-1 group-hover:text-[#a1a1aa]">{model.desc}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="absolute bottom-full left-0 mb-4 bg-[#1a1b1e] border border-white/5 rounded-[24px] p-2 flex flex-col shadow-2xl min-w-[160px] animate-scale-in origin-bottom-left z-50 overflow-hidden">
+                  <div className="flex flex-col gap-1 animate-fade-in">
+                    <button 
+                      onClick={() => { cameraInputRef.current?.click(); setIsAttachMenuOpen(false); }}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-[#d4d4d8] hover:text-white transition-colors text-[14px] text-left cursor-pointer"
+                    >
+                      <Camera className="size-[18px]" />
+                      <span>Camera</span>
+                    </button>
+                    <button 
+                      onClick={() => { photosInputRef.current?.click(); setIsAttachMenuOpen(false); }}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-[#d4d4d8] hover:text-white transition-colors text-[14px] text-left cursor-pointer"
+                    >
+                      <Image className="size-[18px]" />
+                      <span>Photos</span>
+                    </button>
+                    <button 
+                      onClick={() => { fileInputRef.current?.click(); setIsAttachMenuOpen(false); }}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-[#d4d4d8] hover:text-white transition-colors text-[14px] text-left cursor-pointer"
+                    >
+                      <Paperclip className="size-[18px]" />
+                      <span>Files</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

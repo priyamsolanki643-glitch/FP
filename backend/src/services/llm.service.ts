@@ -12,21 +12,10 @@ function getAIClientForModel(modelName?: string): { client: GoogleGenAI, actualM
     throw new Error('No AI API Keys configured');
   }
 
-  let keyIndex = 1; // Default to Pro (index 1)
-  let actualModel = 'gemini-1.5-flash';
-
-  if (modelName === 'FP Go') {
-    keyIndex = 0;
-    actualModel = 'gemini-2.0-flash-lite';
-  } else if (modelName === 'FP Pro') {
-    keyIndex = 1;
-    actualModel = 'gemini-1.5-flash';
-  } else if (modelName === 'FP Elite') {
-    keyIndex = 2;
-    actualModel = 'gemini-2.5-flash';
-  }
+  // Force single key and gemini-1.5-flash as requested by user
+  const key = keys[0];
+  const actualModel = 'gemini-1.5-flash';
   
-  const key = keys[keyIndex] || keys[0];
   return { client: new GoogleGenAI({ apiKey: key }), actualModel };
 }
 
