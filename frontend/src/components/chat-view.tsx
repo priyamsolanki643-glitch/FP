@@ -472,7 +472,7 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                       {isUser ? (
                         /* User message: Dark bubble with optional files */
                         <div className="flex flex-col items-end group max-w-[80%]">
-                          <div className="bg-[#1e1f20] text-[#e3e3e3] text-[14.5px] leading-relaxed px-5 py-3 rounded-[24px] select-text space-y-2.5">
+                          <div className="bg-[#1e1f20] text-[#e3e3e3] text-[14.5px] leading-relaxed px-5 py-3 rounded-[24px] select-text space-y-2.5 break-words max-w-full overflow-hidden">
                             {m.text && <div>{m.text}</div>}
                             {m.files && m.files.length > 0 && (
                               <div className="flex flex-wrap gap-2 pt-1 border-t border-white/5">
@@ -516,8 +516,8 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                         </div>
                       ) : (
                         /* FP message: Bubbleless raw text */
-                        <div className="flex-1 space-y-4 select-text">
-                          <div className="font-sans text-[14.5px] leading-relaxed text-[#d4d4d8] whitespace-pre-wrap">
+                        <div className="flex-1 space-y-4 select-text min-w-0 max-w-full">
+                          <div className="font-sans text-[14.5px] leading-relaxed text-[#d4d4d8] whitespace-pre-wrap break-words overflow-x-auto">
                             {m.text}
                           </div>
 
