@@ -360,19 +360,19 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[160%] h-[180%] bg-[radial-gradient(ellipse_at_center,_rgba(0,0,0,0.85)_0%,_rgba(0,0,0,0.4)_45%,_rgba(0,0,0,0)_75%)] rounded-[100%] z-[-1] pointer-events-none" />
 
           {/* Headline */}
-          <h1 className="text-white leading-[1.05] font-medium font-display mb-8">
+          <h1 className="text-white font-medium font-display mb-6">
             {/* First Line - Stop planning. */}
             <div 
-              className="tracking-tighter pb-1.5 text-white/95"
-              style={{ fontSize: "clamp(3.0rem, 7.0vw, 5.6rem)", fontWeight: 400 }}
+              className="tracking-tighter pb-1 text-white/95 leading-[1.1]"
+              style={{ fontSize: "clamp(2.0rem, 9vw, 5.6rem)", fontWeight: 400 }}
             >
               Stop planning.
             </div>
             
             {/* Second Line - Start executing. */}
             <div 
-              className="shimmer-text-lumensky tracking-tighter"
-              style={{ fontSize: "clamp(3.2rem, 7.5vw, 6.0rem)", fontWeight: 600, marginTop: "-0.1em" }}
+              className="shimmer-text-lumensky tracking-tighter pb-4 leading-[1.15]"
+              style={{ fontSize: "clamp(2.5rem, 11.5vw, 6.5rem)", fontWeight: 600, marginTop: "-0.05em" }}
             >
               Start executing.
             </div>
