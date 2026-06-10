@@ -338,7 +338,7 @@ function TabMissions({ missionData }: { missionData?: MissionData }) {
       protocol: parseProtocol(missionData.strategyContent, missionData.lockedPath),
       day: missionData.dayNumber || 1,
       total: missionData.totalDays || 90,
-      consistency: missionData.consistencyScore || 0
+      consistency: 10
     }
   ] : [
     {
@@ -352,7 +352,7 @@ function TabMissions({ missionData }: { missionData?: MissionData }) {
         "- 12:00 PM: Sirf NCERT back-exercises solve kar. Koi faltu reference book mat choona.",
         "- 03:00 PM: NTA Abhyas App pe free chapter-wise mock test de aur apni aukaat check kar."
       ],
-      day: 4, total: 14, consistency: 85
+      day: 4, total: 14, consistency: 10
     },
     {
       id: 2,
@@ -365,7 +365,7 @@ function TabMissions({ missionData }: { missionData?: MissionData }) {
         "- Focus Area 2: Block Chemistry (Ratna padega, but 2 questions fix hain).",
         "- Blocked: Integration & Conic Sections (Isme time waste nahi karna hai, isko chhod de)."
       ],
-      day: 1, total: 14, consistency: 42
+      day: 1, total: 14, consistency: 10
     },
     {
       id: 3,
@@ -378,7 +378,7 @@ function TabMissions({ missionData }: { missionData?: MissionData }) {
         "- Agar koi task miss ho gaya, toh guilt mein mat beth. Rone se kuch nahi hoga, turant agla Pomodoro start kar.",
         "- Din ke 10 Pomodoro (4.5 hours) hit karne hain, chahe aasmaan gir jaye."
       ],
-      day: 2, total: 14, consistency: 60
+      day: 2, total: 14, consistency: 10
     }
   ];
 
@@ -677,7 +677,7 @@ function TabDebt({ missionData }: { missionData?: MissionData }) {
   }
   
   const debtDays = missionData?.debtDays || 4;
-  const consistencyScore = missionData?.consistencyScore || 42;
+  const consistencyScore = 10;
   const daysToGoal = missionData?.daysToGoal || 320;
   const streakDays = missionData?.streakDays || 2;
   const hasDebt = debtDays > 0;
