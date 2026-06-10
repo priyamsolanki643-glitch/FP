@@ -47,13 +47,14 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: opacity 1.2s ease, transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+          /* Elite spring-physics bezier for a cinematic pop */
+          transition: opacity 0.8s ease-out, transform 1.4s cubic-bezier(0.34, 1.56, 0.64, 1);
           opacity: 0;
-          transform: scale(1.2) translateY(10px);
+          transform: scale(0.1) translateY(40px);
         }
         .gyro-container.phase-1 {
           opacity: 1;
-          transform: scale(2) translateY(0);
+          transform: scale(2.2) translateY(0);
         }
 
         .gyro-core {
