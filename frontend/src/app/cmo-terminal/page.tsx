@@ -365,27 +365,28 @@ export default function CMOTerminal() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
             
-            {/* Persona 1 */}
-            <div className="bg-black border border-white/5 rounded-xl p-5 hover:border-green-500/30 transition-colors">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center font-bold text-white">R</div>
+            {/* Persona 1: Rahul (Linked to Vault Demo) */}
+            <div className="bg-black border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.1)] rounded-xl p-5 hover:border-red-500/60 transition-colors relative">
+              <div className="absolute top-0 right-0 px-2 py-0.5 bg-red-500/10 text-red-500 text-[9px] font-mono tracking-widest rounded-bl-lg">LIVE VAULT LINK</div>
+              <div className="flex items-center gap-3 mb-4 mt-2">
+                <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center font-bold text-red-500">R</div>
                 <div>
-                  <div className="text-white font-medium">Rohan Sharma</div>
-                  <div className="text-xs text-zinc-500">12th Dropper • Lakshya</div>
+                  <div className="text-white font-bold">Rahul M.</div>
+                  <div className="text-xs text-zinc-500 font-mono">JEE 2026 • ₹0 Budget</div>
                 </div>
               </div>
               <div className="space-y-4 text-sm">
                 <div>
-                  <span className="text-red-400 text-xs font-bold tracking-wide uppercase">Day 14 Trigger</span>
-                  <p className="text-zinc-300 mt-1">Missed 3 days of Physics lectures. Consistency dropped to 42%. High flight risk.</p>
+                  <span className="text-red-400 text-[10px] font-bold tracking-widest font-mono uppercase">System Trigger</span>
+                  <p className="text-zinc-300 mt-1 text-xs">Trajectory failing (42%ile). Only 4.5 hrs/day available. High flight risk.</p>
                 </div>
                 <div className="pl-3 border-l-2 border-green-500">
-                  <span className="text-green-500 text-xs font-bold tracking-wide uppercase">FP Intervention</span>
-                  <p className="text-zinc-400 mt-1">Halted new lectures. Created 2-day "Rescue Protocol" focusing only on missed MCQs. Sukuna mode activated.</p>
+                  <span className="text-green-500 text-[10px] font-bold tracking-widest font-mono uppercase">Lumensky Intervention</span>
+                  <p className="text-zinc-400 mt-1 text-xs">Re-routed to free PW Manzil lectures. Bypassed heavy math. Initiated 14-day micro-sprints.</p>
                 </div>
                 <div>
-                  <span className="text-blue-400 text-xs font-bold tracking-wide uppercase">Day 30 Outcome</span>
-                  <p className="text-white mt-1">Backlog cleared. Consistency back to 88%.</p>
+                  <span className="text-blue-400 text-[10px] font-bold tracking-widest font-mono uppercase">Projected Outcome</span>
+                  <p className="text-white mt-1 text-xs font-semibold">Trajectory corrected. On track for 93.41% cutoff.</p>
                 </div>
               </div>
             </div>
