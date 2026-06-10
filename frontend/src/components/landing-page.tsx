@@ -63,8 +63,18 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
     const handleMouseMove = (e: MouseEvent) => {
       const mouseX = e.clientX - width / 2;
       const mouseY = e.clientY - height / 2;
-      targetRotationY = mouseX * 0.0008; // Sensitivity
-      targetRotationX = mouseY * 0.0008;
+      targetRotationY = mouseX * 0.001; // Increased sensitivity
+      targetRotationX = mouseY * 0.001;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        const mouseX = touch.clientX - width / 2;
+        const mouseY = touch.clientY - height / 2;
+        targetRotationY = mouseX * 0.0015; // Higher sensitivity for mobile
+        targetRotationX = mouseY * 0.0015;
+      }
     };
 
     const handleResize = () => {
@@ -72,10 +82,14 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
       height = window.innerHeight;
       canvas.width = width;
       canvas.height = height;
-      sphereRadius = Math.min(width, height) * 0.45;
+      // Slightly smaller radius on mobile to prevent clipping
+      sphereRadius = Math.min(width, height) * (width < 768 ? 0.38 : 0.45);
     };
+    handleResize(); // Initialize correct responsive size
 
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchstart', handleTouchMove, { passive: true });
     window.addEventListener('resize', handleResize);
 
     const render = () => {
@@ -115,12 +129,15 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
         // Depth sorting opacity and size (Z-index illusion)
         const depthRatio = (z2 + sphereRadius) / (sphereRadius * 2);
-        const opacity = Math.max(0.1, 1 - depthRatio);
-        const radius = Math.max(0.5, 2.2 * scale * opacity);
+        const opacity = Math.max(0.05, 1 - depthRatio);
+        
+        // Finer, sharper dots for a more premium look
+        const radius = Math.max(0.3, 1.2 * scale * opacity);
 
         ctx.beginPath();
         ctx.arc(projX, projY, radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.9})`;
+        // Reduced brightness (40% max) so text remains ultra-legible
+        ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.4})`;
         ctx.fill();
       }
 
@@ -131,6 +148,8 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchstart', handleTouchMove);
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
@@ -328,9 +347,9 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
       </header>
 
       {/* ── Hero Main Content ── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 max-w-4xl mx-auto w-full">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 max-w-4xl mx-auto w-full pointer-events-none">
         <div 
-          className="flex flex-col items-center w-full"
+          className="flex flex-col items-center w-full relative pointer-events-auto"
           style={{
             transition: "transform 600ms cubic-bezier(0.16, 1, 0.3, 1), opacity 600ms cubic-bezier(0.16, 1, 0.3, 1)",
             opacity: isExiting ? 0 : (visible ? 1 : 0),
@@ -338,6 +357,9 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
             willChange: "transform, opacity",
           }}
         >
+          {/* Ultra-dark atmospheric halo for text legibility */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[160%] bg-black/70 blur-[50px] rounded-full z-[-1] pointer-events-none" />
+
           {/* Headline */}
           <h1 className="text-white leading-[1.05] font-medium font-display mb-8">
             {/* First Line - Stop planning. */}
