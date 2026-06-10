@@ -86,7 +86,6 @@ export class LLMService {
           responseMimeType: 'application/json',
           responseSchema: responseSchema,
           temperature: 0.3,
-          tools: [{ googleSearch: {} }], // Grounding active
         }
       });
 
@@ -171,7 +170,6 @@ export class LLMService {
           responseMimeType: 'application/json',
           responseSchema: responseSchema,
           temperature: 0.2,
-          tools: [{ googleSearch: {} }],
         }
       });
 
@@ -298,7 +296,6 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
           responseMimeType: 'application/json',
           responseSchema: responseSchema,
           temperature: 0.4,
-          tools: [{ googleSearch: {} }],
         }
       });
 
