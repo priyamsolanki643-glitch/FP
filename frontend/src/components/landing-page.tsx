@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowRight } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
 
@@ -14,10 +14,126 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
   const [visible, setVisible] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
     return () => clearTimeout(t);
+  }, []);
+
+  // God-Level 3D Particle Sphere Engine
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+
+    const particles: { originalX: number, originalY: number, originalZ: number }[] = [];
+    const particleCount = 1200; // Extremely dense star matrix
+    let sphereRadius = Math.min(width, height) * 0.45; 
+    
+    // Fibonacci sphere algorithm for perfect even distribution
+    const phi = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < particleCount; i++) {
+      const y = 1 - (i / (particleCount - 1)) * 2;
+      const radiusAtY = Math.sqrt(1 - y * y);
+      const theta = phi * i;
+
+      const x = Math.cos(theta) * radiusAtY;
+      const z = Math.sin(theta) * radiusAtY;
+
+      particles.push({
+        originalX: x,
+        originalY: y,
+        originalZ: z,
+      });
+    }
+
+    let rotationX = 0;
+    let rotationY = 0;
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+    let animationFrameId: number;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const mouseX = e.clientX - width / 2;
+      const mouseY = e.clientY - height / 2;
+      targetRotationY = mouseX * 0.0008; // Sensitivity
+      targetRotationX = mouseY * 0.0008;
+    };
+
+    const handleResize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+      sphereRadius = Math.min(width, height) * 0.45;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('resize', handleResize);
+
+    const render = () => {
+      ctx.clearRect(0, 0, width, height);
+      
+      // Auto-rotation + Kinetic Mouse Interaction with fluid friction
+      targetRotationY += 0.002; 
+      rotationX += (targetRotationX - rotationX) * 0.05;
+      rotationY += (targetRotationY - rotationY) * 0.05;
+
+      const cosX = Math.cos(rotationX);
+      const sinX = Math.sin(rotationX);
+      const cosY = Math.cos(rotationY);
+      const sinY = Math.sin(rotationY);
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        
+        // Apply radius scaling dynamically
+        const px = p.originalX * sphereRadius;
+        const py = p.originalY * sphereRadius;
+        const pz = p.originalZ * sphereRadius;
+
+        // 3D Rotation Matrix
+        let x1 = px * cosY - pz * sinY;
+        let z1 = pz * cosY + px * sinY;
+        
+        let y2 = py * cosX - z1 * sinX;
+        let z2 = z1 * cosX + py * sinX;
+
+        // 3D to 2D Projection
+        const perspective = 1000;
+        const scale = perspective / (perspective + z2);
+        
+        const projX = width / 2 + x1 * scale;
+        const projY = height / 2 + y2 * scale;
+
+        // Depth sorting opacity and size (Z-index illusion)
+        const depthRatio = (z2 + sphereRadius) / (sphereRadius * 2);
+        const opacity = Math.max(0.1, 1 - depthRatio);
+        const radius = Math.max(0.5, 2.2 * scale * opacity);
+
+        ctx.beginPath();
+        ctx.arc(projX, projY, radius, 0, Math.PI * 2);
+        ctx.fillStyle = \`rgba(255, 255, 255, \${opacity * 0.9})\`;
+        ctx.fill();
+      }
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
+    };
   }, []);
 
   const handleStart = () => {
@@ -192,7 +308,11 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
       {/* Lumensky 3D Abyss Environment */}
       <div className="eclipse-glow z-0" />
-      <div className="grid-floor z-0" />
+      <canvas 
+        ref={canvasRef} 
+        className="absolute inset-0 z-0 pointer-events-none"
+        style={{ opacity: isExiting ? 0 : 1, transition: 'opacity 1s ease' }}
+      />
 
       {/* ── Header ── */}
       <header 
@@ -249,7 +369,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           {/* Centered CTA Row */}
           <div className="flex justify-center w-full mt-4">
             <button onClick={handleStart} className="btn-lumensky-core group">
-              <span>Initiate Sequence</span>
+              <span>Get started</span>
               <ArrowRight size={18} className="arrow-icon opacity-80 group-hover:opacity-100" />
             </button>
           </div>
