@@ -350,7 +350,7 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(50);
       }
-    }, 1200); // 1.2s long press for better UX
+    }, 700); // 700ms long press for better UX and micro-jitter tolerance
   };
 
   const handleTouchEnd = () => {
@@ -504,7 +504,6 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                           className="relative flex flex-col items-end group max-w-[80%]"
                           onTouchStart={() => handleTouchStart(m.id)}
                           onTouchEnd={handleTouchEnd}
-                          onTouchMove={handleTouchEnd}
                         >
                           <div className="bg-[#1e1f20] text-[#e3e3e3] text-[14.5px] leading-relaxed px-5 py-3 rounded-[24px] select-text space-y-2.5 break-words max-w-full overflow-hidden">
                             {m.text && <div>{m.text}</div>}
@@ -562,7 +561,6 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                           className="relative flex-1 space-y-4 select-text min-w-0 max-w-full group"
                           onTouchStart={() => handleTouchStart(m.id)}
                           onTouchEnd={handleTouchEnd}
-                          onTouchMove={handleTouchEnd}
                         >
                           <div className="font-sans text-[14.5px] leading-relaxed text-[#d4d4d8] whitespace-pre-wrap break-words overflow-x-auto">
                             {m.text}
