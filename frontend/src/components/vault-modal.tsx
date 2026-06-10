@@ -13,12 +13,6 @@ interface VaultModalProps {
 
 const TABS: { id: TabId; label: string; icon: any; desc: string }[] = [
   { 
-    id: "demo", 
-    label: "Demo Pitch", 
-    icon: Zap,
-    desc: "CMO PROJECTION: Simulating Rahul's constraint-based AI execution roadmap."
-  },
-  { 
     id: "missions", 
     label: "Missions", 
     icon: Target,
