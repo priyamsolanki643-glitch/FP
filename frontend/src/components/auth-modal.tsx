@@ -1,21 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../utils/supabase/client";
-import { X, ArrowRight, Mail, Fingerprint, Loader2, User, Lock } from "lucide-react";
+import { X, ArrowRight, Mail, Fingerprint, Loader2, User, KeyRound } from "lucide-react";
 
 interface AuthModalProps {
   onClose: () => void;
   onSuccess: () => void;
-  initialMode?: "login" | "signup";
 }
 
-export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthModalProps) {
+export function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [mode, setMode] = useState<"login" | "signup">(initialMode);
-  const [name, setName] = useState("");
+  const [step, setStep] = useState<"email" | "otp" | "name">("email");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,37 +29,80 @@ export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthMo
     return () => window.removeEventListener("keydown", fn);
   }, [onClose]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || (mode === "signup" && !name)) return;
-    
+    if (!email) return;
     setIsLoading(true);
     setError(null);
-    
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: name,
-            }
-          }
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-      }
-
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true },
+      });
+      if (error) throw error;
+      setStep("otp");
+    } catch (err: any) {
+      setError(err.message || "Failed to send code.");
+    } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    if (value && index < 5) {
+      document.getElementById(`otp-${index + 1}`)?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      document.getElementById(`otp-${index - 1}`)?.focus();
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = otp.join("");
+    if (token.length !== 6) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: "email",
+      });
+      if (error) throw error;
+      if (!data.user?.user_metadata?.full_name) {
+        setStep("name");
+      } else {
+        onSuccess();
+      }
+    } catch (err: any) {
+      setError(err.message || "Invalid code.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNameSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: name.trim() },
+      });
+      if (error) throw error;
       onSuccess();
     } catch (err: any) {
-      setError(err.message || "Authentication failed.");
+      setError(err.message || "Failed to save name.");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -71,9 +113,7 @@ export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthMo
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
-        options: {
-          redirectTo: window.location.origin + '/',
-        }
+        options: { redirectTo: window.location.origin + '/' }
       });
       if (error) throw error;
     } catch (err: any) {
@@ -84,7 +124,6 @@ export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthMo
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Deep blurred backdrop */}
       <div
         onClick={onClose}
         className="absolute inset-0 cursor-pointer"
@@ -95,7 +134,6 @@ export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthMo
         }}
       />
 
-      {/* Modal Container */}
       <div
         className={`relative w-full max-w-[420px] bg-[#000000] border border-[#18181b] rounded-[24px] overflow-hidden flex flex-col transition-all duration-[400ms] ${
           mounted ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-[0.96]"
@@ -105,7 +143,6 @@ export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthMo
           transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
         }}
       >
-        {/* Header */}
         <div className="flex justify-between items-center px-6 pt-6 pb-2">
           <div className="size-8 rounded-full bg-white/5 border border-white/10 grid place-items-center">
             <Fingerprint className="size-4 text-[#a1a1aa]" />
@@ -118,23 +155,87 @@ export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthMo
           </button>
         </div>
 
-        {/* Content Body */}
         <div className="px-6 py-4 md:pb-8">
-          
           <div className="mb-8 mt-2">
             <h2 className="text-2xl font-semibold text-white tracking-tight mb-2">
-              {mode === "signup" ? "Create an account." : "Welcome back."}
+              {step === "email" && "Log in or sign up."}
+              {step === "otp" && "Verify your identity."}
+              {step === "name" && "What should we call you?"}
             </h2>
             <p className="text-[14px] text-[#a1a1aa] leading-relaxed">
-              {mode === "signup" 
-                ? "Enter your details to start executing." 
-                : "Enter your credentials to continue."}
+              {step === "email" && "Enter your email. No passwords needed."}
+              {step === "otp" && `We sent a 6-digit code to ${email}`}
+              {step === "name" && "This is your first time here. Set your identity."}
             </p>
           </div>
 
           <div className="animate-message-reveal">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-              {mode === "signup" && (
+            {step === "email" && (
+              <form onSubmit={handleEmailSubmit} className="flex flex-col gap-5">
+                <div className="relative flex items-center bg-transparent border-b border-[#27272a] focus-within:border-[#ffffff] transition-colors pb-3">
+                  <Mail className="size-4 text-[#52525b] absolute left-1" />
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email address"
+                    className="w-full bg-transparent border-none outline-none text-white text-[15px] pl-8 placeholder:text-[#52525b]"
+                    required
+                    autoFocus
+                  />
+                </div>
+                {error && <div className="text-[#ff3333] text-[13px] font-mono">{error}</div>}
+                <button 
+                  type="submit"
+                  disabled={isLoading}
+                  className="mt-2 flex items-center justify-center gap-2 w-full bg-[#ffffff] text-black font-semibold py-3.5 rounded-xl hover:bg-[#f4f4f5] transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(255,255,255,0.15)]"
+                >
+                  {isLoading ? <Loader2 className="size-5 animate-spin" /> : "Continue"}
+                  {!isLoading && <ArrowRight className="size-4" />}
+                </button>
+              </form>
+            )}
+
+            {step === "otp" && (
+              <form onSubmit={handleOtpSubmit} className="flex flex-col gap-5">
+                <div className="flex justify-between items-center gap-2 mb-2">
+                  {otp.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      id={`otp-${idx}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                      className="w-12 h-14 bg-[#111111] border border-[#27272a] focus:border-white rounded-lg text-center text-xl font-mono text-white outline-none transition-colors"
+                      autoFocus={idx === 0}
+                      required
+                    />
+                  ))}
+                </div>
+                {error && <div className="text-[#ff3333] text-[13px] font-mono">{error}</div>}
+                <button 
+                  type="submit"
+                  disabled={isLoading || otp.join("").length !== 6}
+                  className="mt-2 flex items-center justify-center gap-2 w-full bg-[#ffffff] text-black font-semibold py-3.5 rounded-xl hover:bg-[#f4f4f5] transition-all disabled:opacity-50"
+                >
+                  {isLoading ? <Loader2 className="size-5 animate-spin" /> : "Verify Code"}
+                  {!isLoading && <ArrowRight className="size-4" />}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setStep("email")}
+                  className="text-[#a1a1aa] text-[13px] hover:text-white transition-colors"
+                >
+                  Back to email
+                </button>
+              </form>
+            )}
+
+            {step === "name" && (
+              <form onSubmit={handleNameSubmit} className="flex flex-col gap-5">
                 <div className="relative flex items-center bg-transparent border-b border-[#27272a] focus-within:border-[#ffffff] transition-colors pb-3">
                   <User className="size-4 text-[#52525b] absolute left-1" />
                   <input 
@@ -143,113 +244,56 @@ export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthMo
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Full name"
                     className="w-full bg-transparent border-none outline-none text-white text-[15px] pl-8 placeholder:text-[#52525b]"
-                    required={mode === "signup"}
+                    required
+                    autoFocus
                   />
                 </div>
-              )}
+                {error && <div className="text-[#ff3333] text-[13px] font-mono">{error}</div>}
+                <button 
+                  type="submit"
+                  disabled={isLoading || !name.trim()}
+                  className="mt-2 flex items-center justify-center gap-2 w-full bg-[#ffffff] text-black font-semibold py-3.5 rounded-xl hover:bg-[#f4f4f5] transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(255,255,255,0.15)]"
+                >
+                  {isLoading ? <Loader2 className="size-5 animate-spin" /> : "Complete Profile"}
+                  {!isLoading && <ArrowRight className="size-4" />}
+                </button>
+              </form>
+            )}
 
-              <div className="relative flex items-center bg-transparent border-b border-[#27272a] focus-within:border-[#ffffff] transition-colors pb-3">
-                <Mail className="size-4 text-[#52525b] absolute left-1" />
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email address"
-                  className="w-full bg-transparent border-none outline-none text-white text-[15px] pl-8 placeholder:text-[#52525b]"
-                  required
-                />
-              </div>
-
-              <div className="relative flex items-center bg-transparent border-b border-[#27272a] focus-within:border-[#ffffff] transition-colors pb-3">
-                <Lock className="size-4 text-[#52525b] absolute left-1" />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  className="w-full bg-transparent border-none outline-none text-white text-[15px] pl-8 placeholder:text-[#52525b]"
-                  required
-                />
-              </div>
-
-              {error && (
-                <div className="w-full text-left text-[#ff3333] text-[13px] font-mono tracking-wide">
-                  {error}
+            {step === "email" && (
+              <>
+                <div className="flex items-center gap-4 my-8">
+                  <div className="h-[1px] flex-1 bg-[#18181b]" />
+                  <span className="text-[11px] font-mono text-[#52525b] uppercase tracking-widest">Or connect via</span>
+                  <div className="h-[1px] flex-1 bg-[#18181b]" />
                 </div>
-              )}
-              
-              <button 
-                type="submit"
-                disabled={isLoading}
-                className="mt-2 flex items-center justify-center gap-2 w-full bg-[#ffffff] text-black font-semibold py-3.5 rounded-xl hover:bg-[#f4f4f5] transition-all disabled:opacity-50 disabled:hover:bg-[#ffffff] cursor-pointer shadow-[0_0_20px_rgba(255, 255, 255,0.15)] hover:shadow-[0_0_30px_rgba(255, 255, 255,0.3)]"
-              >
-                {isLoading ? <Loader2 className="size-5 animate-spin" /> : (mode === "signup" ? "Sign Up" : "Log In")}
-                {!isLoading && <ArrowRight className="size-4" />}
-              </button>
-            </form>
-
-            <div className="flex items-center gap-4 my-8">
-              <div className="h-[1px] flex-1 bg-[#18181b]" />
-              <span className="text-[11px] font-mono text-[#52525b] uppercase tracking-widest">Or connect via</span>
-              <div className="h-[1px] flex-1 bg-[#18181b]" />
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={() => handleOAuthLogin('github')}
-                disabled={isLoading}
-                className="flex items-center justify-center gap-3 w-full bg-transparent text-zinc-500 hover:text-white font-medium py-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
-              >
-                {isLoading ? <Loader2 className="size-4 animate-spin" /> : (
-                  <svg className="size-4 text-zinc-500 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.022A9.606 9.606 0 0112 6.82c.85.004 1.705.114 2.504.336 1.909-1.29 2.747-1.022 2.747-1.022.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                  </svg>
-                )}
-                Continue with GitHub
-              </button>
-              <button 
-                onClick={() => handleOAuthLogin('google')}
-                disabled={isLoading}
-                className="flex items-center justify-center gap-3 w-full bg-transparent text-zinc-500 hover:text-white font-medium py-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
-              >
-                {isLoading ? <Loader2 className="size-4 animate-spin" /> : (
-                  <svg className="size-4 grayscale group-hover:grayscale-0 opacity-70 group-hover:opacity-100 transition-all" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
-                )}
-                Continue with Google
-              </button>
-            </div>
-
-            <div className="mt-8 flex items-center justify-center text-[13px] font-medium text-[#52525b]">
-              {mode === "signup" ? (
-                <>
-                  Already have an account? 
+                <div className="flex flex-col gap-3">
                   <button 
-                    type="button"
-                    onClick={() => { setMode("login"); setError(null); }}
-                    className="ml-2 text-white hover:underline transition-all"
+                    onClick={() => handleOAuthLogin('github')}
+                    disabled={isLoading}
+                    className="flex items-center justify-center gap-3 w-full bg-transparent text-zinc-500 hover:text-white font-medium py-2 transition-all cursor-pointer disabled:opacity-50 group"
                   >
-                    Login
+                    <svg className="size-4 text-zinc-500 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.022A9.606 9.606 0 0112 6.82c.85.004 1.705.114 2.504.336 1.909-1.29 2.747-1.022 2.747-1.022.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
+                    </svg>
+                    Continue with GitHub
                   </button>
-                </>
-              ) : (
-                <>
-                  Don't have an account? 
                   <button 
-                    type="button"
-                    onClick={() => { setMode("signup"); setError(null); }}
-                    className="ml-2 text-white hover:underline transition-all"
+                    onClick={() => handleOAuthLogin('google')}
+                    disabled={isLoading}
+                    className="flex items-center justify-center gap-3 w-full bg-transparent text-zinc-500 hover:text-white font-medium py-2 transition-all cursor-pointer disabled:opacity-50 group"
                   >
-                    Sign up
+                    <svg className="size-4 grayscale group-hover:grayscale-0 opacity-70 group-hover:opacity-100 transition-all" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Continue with Google
                   </button>
-                </>
-              )}
-            </div>
-
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

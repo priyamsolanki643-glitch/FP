@@ -68,6 +68,16 @@ export default function EntryPoint() {
     checkSession();
   }, []);
 
+  const verifyAndLock = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      setIsLocked(true);
+      setHasSession(true);
+    } else {
+      console.warn("Security check failed: No valid session found.");
+    }
+  };
+
   useEffect(() => {
     if (!isLocked) return;
 
@@ -144,8 +154,8 @@ export default function EntryPoint() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  if (!isLocked) {
-    return <LandingPage onLock={() => setIsLocked(true)} hasSession={hasSession} />;
+  if (!showSplash && !isLocked) {
+    return <LandingPage onLock={verifyAndLock} hasSession={hasSession} />;
   }
 
   return (
