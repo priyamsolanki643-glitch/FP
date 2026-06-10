@@ -625,10 +625,20 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                         position: absolute;
                         width: 100%;
                         height: 100%;
-                        border: 1px solid rgba(255,255,255,0.1);
+                        border: 1px solid rgba(255,255,255,0.15);
                         border-radius: 50%;
-                        border-top: 1.5px solid rgba(255,255,255,0.8);
-                        border-right: 1px solid rgba(255,255,255,0.3);
+                      }
+                      .gyro-ring::after {
+                        content: '';
+                        position: absolute;
+                        top: -2px; 
+                        left: 50%;
+                        transform: translateX(-50%);
+                        width: 4px; 
+                        height: 4px;
+                        background: #fff;
+                        border-radius: 50%;
+                        box-shadow: 0 0 6px 1px rgba(255,255,255,0.8);
                       }
                       .ring-1 { animation: spin1 1.8s linear infinite; }
                       .ring-2 { animation: spin2 2.4s linear infinite; }
