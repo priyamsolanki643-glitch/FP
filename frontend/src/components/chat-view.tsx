@@ -25,6 +25,8 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const [greeting, setGreeting] = useState({ text: "Hi bro", accent: "execution kiya ?", animateAccent: true });
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -125,11 +127,16 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
 
     window.addEventListener("new-thread", handleNewThread);
     window.addEventListener("load-thread", handleLoadThread);
+    const handleGlobalClick = () => {
+      if (activeMessageId) setActiveMessageId(null);
+    };
+    window.addEventListener("click", handleGlobalClick);
     return () => {
       window.removeEventListener("new-thread", handleNewThread);
       window.removeEventListener("load-thread", handleLoadThread);
+      window.removeEventListener("click", handleGlobalClick);
     };
-  }, []);
+  }, [activeMessageId]);
 
   // Handle textarea height auto adjustment
   useEffect(() => {
@@ -328,6 +335,28 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
     handleSend(lastUserMessage.text);
   }, [messages, handleSend]);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleTouchStart = (id: string) => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => {
+      setActiveMessageId(id);
+      // Haptic feedback if supported
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 1200); // 1.2s long press for better UX
+  };
+
+  const handleTouchEnd = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+  };
+
   const isInitial = messages.length === 0;
 
   return (
@@ -471,7 +500,12 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                       
                       {isUser ? (
                         /* User message: Dark bubble with optional files */
-                        <div className="flex flex-col items-end group max-w-[80%]">
+                        <div 
+                          className="relative flex flex-col items-end group max-w-[80%]"
+                          onTouchStart={() => handleTouchStart(m.id)}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchMove={handleTouchEnd}
+                        >
                           <div className="bg-[#1e1f20] text-[#e3e3e3] text-[14.5px] leading-relaxed px-5 py-3 rounded-[24px] select-text space-y-2.5 break-words max-w-full overflow-hidden">
                             {m.text && <div>{m.text}</div>}
                             {m.files && m.files.length > 0 && (
@@ -497,51 +531,66 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                             )}
                           </div>
                           {/* Actions row for user */}
-                          <div className="flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[#666666]">
+                          <div className={`flex items-center gap-3 transition-all duration-300 text-[#a1a1aa] ${
+                            activeMessageId === m.id 
+                              ? "absolute -top-12 right-0 bg-black text-white px-4 py-2.5 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] opacity-100 scale-100 z-50 border border-white/5" 
+                              : "opacity-0 md:group-hover:opacity-100 mt-1.5 scale-95 md:scale-100"
+                          }`}>
                             <button 
-                              onClick={() => { setInput(m.text); inputRef.current?.focus(); }} 
-                              className="p-1.5 rounded-full hover:bg-white/5 hover:text-white transition-colors" 
-                              title="Edit"
+                              onClick={(e) => { e.stopPropagation(); setInput(m.text); inputRef.current?.focus(); setActiveMessageId(null); }} 
+                              className="p-1 hover:text-white transition-colors" 
                             >
-                              <Edit className="size-3.5" />
+                              <Edit className="size-4" />
                             </button>
                             <button 
-                              onClick={() => copyToClipboard(m.text)} 
-                              className="p-1.5 rounded-full hover:bg-white/5 hover:text-white transition-colors" 
-                              title="Copy"
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(m.text); setActiveMessageId(null); }} 
+                              className="p-1 hover:text-white transition-colors" 
                             >
-                              <Copy className="size-3.5" />
+                              <Copy className="size-4" />
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleRetry(); setActiveMessageId(null); }} 
+                              className="p-1 hover:text-white transition-colors" 
+                            >
+                              <RefreshCw className="size-4" />
                             </button>
                           </div>
                         </div>
                       ) : (
                         /* FP message: Bubbleless raw text */
-                        <div className="flex-1 space-y-4 select-text min-w-0 max-w-full">
+                        <div 
+                          className="relative flex-1 space-y-4 select-text min-w-0 max-w-full group"
+                          onTouchStart={() => handleTouchStart(m.id)}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchMove={handleTouchEnd}
+                        >
                           <div className="font-sans text-[14.5px] leading-relaxed text-[#d4d4d8] whitespace-pre-wrap break-words overflow-x-auto">
                             {m.text}
                           </div>
 
                           {/* Actions row */}
-                          <div className="flex items-center gap-3 pt-2 text-[#666666]">
+                          <div className={`flex items-center gap-4 transition-all duration-300 text-[#a1a1aa] ${
+                            activeMessageId === m.id 
+                              ? "absolute -top-12 left-0 bg-black text-white px-4 py-2.5 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] opacity-100 scale-100 z-50 border border-white/5" 
+                              : "opacity-0 md:group-hover:opacity-100 pt-2 scale-95 md:scale-100"
+                          }`}>
                             <button 
-                              onClick={() => copyToClipboard(m.text)}
-                              className="p-1.5 rounded-full hover:bg-white/5 hover:text-white cursor-pointer transition-colors"
-                              title="Copy parameters"
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(m.text); setActiveMessageId(null); }}
+                              className="p-1 hover:text-white cursor-pointer transition-colors"
                             >
-                              <Copy className="size-3.5" />
+                              <Copy className="size-4" />
                             </button>
                             <button 
-                              onClick={handleRetry}
-                              className="p-1.5 rounded-full hover:bg-white/5 hover:text-white cursor-pointer transition-colors"
-                              title="Regenerate"
+                              onClick={(e) => { e.stopPropagation(); handleRetry(); setActiveMessageId(null); }}
+                              className="p-1 hover:text-white cursor-pointer transition-colors"
                             >
-                              <RefreshCw className="size-3.5" />
+                              <RefreshCw className="size-4" />
                             </button>
-                            <button className="p-1.5 rounded-full hover:bg-white/5 hover:text-white cursor-pointer transition-colors">
-                              <ThumbsUp className="size-3.5" />
+                            <button className="p-1 hover:text-white cursor-pointer transition-colors">
+                              <ThumbsUp className="size-4" />
                             </button>
-                            <button className="p-1.5 rounded-full hover:bg-white/5 hover:text-white cursor-pointer transition-colors">
-                              <ThumbsDown className="size-3.5" />
+                            <button className="p-1 hover:text-white cursor-pointer transition-colors">
+                              <ThumbsDown className="size-4" />
                             </button>
                           </div>
                         </div>
@@ -702,12 +751,7 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                   onChange={(e) => setInput(e.target.value)}
                   onFocus={() => setIsInputFocused(true)}
                   onBlur={() => setIsInputFocused(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
+                  onKeyDown={handleKeyDown}
                   rows={1}
                   className="w-full bg-transparent outline-none resize-none text-[16px] text-white py-1 px-1 no-scrollbar leading-[1.5] self-center my-auto"
                   style={{ maxHeight: 120 }}
