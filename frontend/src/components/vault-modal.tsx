@@ -289,7 +289,7 @@ export function VaultModal({ onClose }: VaultModalProps) {
 }
 
 function TabMissions({ missionData }: { missionData?: MissionData }) {
-  const [activeMission, setActiveMission] = useState<MissionData | null>(null);
+  const [activeMission, setActiveMission] = useState<any | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
 
@@ -823,7 +823,6 @@ function TabMarket({ marketData }: { marketData?: MarketData }) {
   const timing = marketData?.timingSignals?.[0] || { timeframe: "3 Months Left", urgency: "CRITICAL" };
   const insight = marketData?.topInsight || "Bhai, NTA ka pattern badal gaya hai. Sirf gadhe jaisi mehnat se kuch nahi hoga, smart execution se marks aayenge. Unnecessary topics turant drop kar.";
 
-  return (
   return (
     <div className="flex flex-col gap-4 animate-fade-in w-full">
       {/* Hero Banner: Urgent Insight */}
