@@ -47,13 +47,13 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: opacity 1s ease, transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: opacity 1.2s ease, transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
           opacity: 0;
-          transform: scale(0.6);
+          transform: scale(0.7) translateY(10px);
         }
         .gyro-container.phase-1 {
           opacity: 1;
-          transform: scale(1);
+          transform: scale(1) translateY(0);
         }
 
         .gyro-core {
@@ -63,7 +63,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           background: #fff;
           border-radius: 50%;
           box-shadow: 0 0 10px 2px rgba(255,255,255,0.8);
-          animation: corePulse 1s ease-in-out infinite alternate;
+          animation: corePulse 1.5s ease-in-out infinite alternate;
         }
         .gyro-ring {
           position: absolute;
@@ -75,16 +75,17 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           border-right: 1.5px solid rgba(255,255,255,0.4);
           border-left: 1px solid rgba(255,255,255,0.1);
         }
-        .ring-1 { animation: spin1 1.2s linear infinite; }
-        .ring-2 { animation: spin2 1.6s linear infinite; }
-        .ring-3 { animation: spin3 2s linear infinite; }
+        /* Slow, majestic 3D spin */
+        .ring-1 { animation: spin1 1.8s linear infinite; }
+        .ring-2 { animation: spin2 2.4s linear infinite; }
+        .ring-3 { animation: spin3 3s linear infinite; }
 
         @keyframes spin1 { 100% { transform: rotateX(65deg) rotateY(0deg) rotateZ(360deg); } }
         @keyframes spin2 { 100% { transform: rotateX(0deg) rotateY(65deg) rotateZ(360deg); } }
         @keyframes spin3 { 100% { transform: rotateX(45deg) rotateY(45deg) rotateZ(360deg); } }
         
         @keyframes corePulse {
-          0% { transform: scale(0.9); opacity: 0.7; box-shadow: 0 0 8px rgba(255,255,255,0.5); }
+          0% { transform: scale(0.8); opacity: 0.6; box-shadow: 0 0 6px rgba(255,255,255,0.4); }
           100% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 16px rgba(255,255,255,1); }
         }
 
