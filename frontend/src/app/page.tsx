@@ -86,6 +86,58 @@ export default function EntryPoint() {
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, [isLocked, isVaultOpen]);
 
+  // Touch gesture control for Sidebar (Swipe Right to open, Swipe Left to close)
+  useEffect(() => {
+    if (!isLocked) return;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        isVaultOpen || 
+        target.closest("input, textarea, button, a, [role='slider'], pre, code, .overflow-x-auto")
+      ) {
+        return;
+      }
+
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartX === 0 || touchStartY === 0) return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+
+      const diffX = touchEndX - touchStartX;
+      const diffY = touchEndY - touchStartY;
+
+      // Swipe Right (Open Sidebar) - start in left 60% of the screen
+      if (diffX > 80 && Math.abs(diffY) < 60 && touchStartX < window.innerWidth * 0.6) {
+        setIsSidebarOpen(true);
+      }
+
+      // Swipe Left (Close Sidebar)
+      if (diffX < -80 && Math.abs(diffY) < 60) {
+        setIsSidebarOpen(false);
+      }
+
+      touchStartX = 0;
+      touchStartY = 0;
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isLocked, isVaultOpen]);
+
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
