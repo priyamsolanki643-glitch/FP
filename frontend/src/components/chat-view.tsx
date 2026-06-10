@@ -615,22 +615,20 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                       }
                       .gyro-core {
                         position: absolute;
-                        width: 5px;
-                        height: 5px;
+                        width: 4px;
+                        height: 4px;
                         background: #fff;
                         border-radius: 50%;
-                        box-shadow: 0 0 12px 3px rgba(255,255,255,1), 0 0 20px 5px rgba(255,255,255,0.5);
                         animation: corePulse 1.5s ease-in-out infinite alternate;
                       }
                       .gyro-ring {
                         position: absolute;
                         width: 100%;
                         height: 100%;
-                        border: 1px solid rgba(255,255,255,0.15);
+                        border: 1px solid rgba(255,255,255,0.1);
                         border-radius: 50%;
-                        border-top: 1.5px solid rgba(255,255,255,0.9);
-                        border-right: 1px solid rgba(255,255,255,0.4);
-                        box-shadow: inset 0 0 4px rgba(255,255,255,0.2), 0 0 4px rgba(255,255,255,0.2);
+                        border-top: 1.5px solid rgba(255,255,255,0.8);
+                        border-right: 1px solid rgba(255,255,255,0.3);
                       }
                       .ring-1 { animation: spin1 1.8s linear infinite; }
                       .ring-2 { animation: spin2 2.4s linear infinite; }
@@ -649,8 +647,8 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                         100% { transform: rotateX(45deg) rotateY(45deg) rotateZ(360deg); } 
                       }
                       @keyframes corePulse {
-                        0% { transform: scale(0.8); opacity: 0.8; box-shadow: 0 0 10px 2px rgba(255,255,255,0.8); }
-                        100% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 20px 6px rgba(255,255,255,1), 0 0 30px 10px rgba(255,255,255,0.3); }
+                        0% { transform: scale(0.8); opacity: 0.6; box-shadow: 0 0 2px rgba(255,255,255,0.4); }
+                        100% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 6px rgba(255,255,255,0.8); }
                       }
                       
                       @keyframes shimmerText {
@@ -669,7 +667,6 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                         -webkit-background-clip: text;
                         background-clip: text;
                         animation: shimmerText 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-                        text-shadow: 0 0 20px rgba(255,255,255,0.15);
                       }
                     `}</style>
                     <div className="gyro-container">
