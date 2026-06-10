@@ -2,9 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Hardcoded Supabase credentials to bypass Cloud Run environment variable issues
-const supabaseUrl = process.env.SUPABASE_URL || 'https://kscqvigvcfjdulonvdxa.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzY3F2aWd2Y2ZqZHVsb252ZHhhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDY2MjAxMywiZXhwIjoyMDk2MjM4MDEzfQ.lNlB6nnfaeP9UADMPrMLBh0NzXr_EK6GYZB8TszR_KM';
+// Supabase credentials MUST be provided via environment variables only — never hardcoded.
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('CRITICAL: SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables are required.');
+  // Allow app to continue but Supabase calls will fail gracefully
+}
 
 // Determine if we should use local JSON fallback
 const isLocalFallback = false; // Forced to false to ensure Supabase is used
@@ -467,4 +472,54 @@ export class DbService {
     }
     return data || [];
   }
+
+  // DEEP ANALYTICS: LINGUISTIC SIGNALS
+  static async saveLinguisticSignal(payload: any): Promise<void> {
+    if (isLocalFallback) return;
+    const { error } = await supabase
+      .from('linguistic_signals')
+      .insert({ ...payload, timestamp: new Date().toISOString() });
+    if (error) console.error('saveLinguisticSignal DB error:', error);
+  }
+
+  static async getLastLinguisticSignal(userId: string): Promise<any> {
+    if (isLocalFallback) return null;
+    const { data, error } = await supabase
+      .from('linguistic_signals')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error('getLastLinguisticSignal DB error:', error);
+      return null;
+    }
+    return data;
+  }
+
+  static async getLinguisticSignalsLast7Days(userId: string): Promise<any[]> {
+    if (isLocalFallback) return [];
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+      .from('linguistic_signals')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('timestamp', sevenDaysAgo)
+      .order('timestamp', { ascending: true });
+    if (error) {
+      console.error('getLinguisticSignalsLast7Days DB error:', error);
+      return [];
+    }
+    return data || [];
+  }
+
+  static async saveWeeklyRiskReport(payload: any): Promise<void> {
+    if (isLocalFallback) return;
+    const { error } = await supabase
+      .from('weekly_risk_reports')
+      .insert({ ...payload, week_start_date: new Date().toISOString() });
+    if (error) console.error('saveWeeklyRiskReport DB error:', error);
+  }
 }
+

@@ -12,9 +12,9 @@ function getAIClientForModel(modelName?: string): { client: GoogleGenAI, actualM
     throw new Error('No AI API Keys configured');
   }
 
-  // Force single key and use lightest eligible model
+  // Force single key and use latest eligible model
   const key = keys[0];
-  const actualModel = 'gemini-1.5-flash-8b';
+  const actualModel = 'gemini-2.5-flash-lite-preview-06-17';
   
   return { client: new GoogleGenAI({ apiKey: key }), actualModel };
 }

@@ -413,12 +413,6 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
           >
             <Cpu className="size-5" />
           </button>
-          <button 
-            onClick={() => window.dispatchEvent(new Event('new-thread'))}
-            className="p-2 text-[#ffffff] hover:text-[#f4f4f5] active:scale-90 transition-all cursor-pointer drop-shadow-[0_0_12px_rgba(255, 255, 255,0.6)]"
-          >
-            <Plus className="size-6" />
-          </button>
         </div>
       </header>
 
