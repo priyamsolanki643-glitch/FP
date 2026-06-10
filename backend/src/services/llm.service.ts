@@ -113,13 +113,17 @@ export class LLMService {
         };
       }
 
+      const fullContents = [
+        { role: 'user', parts: [{ text: systemPrompt + "\n\nIMPORTANT: You must output your response in JSON format matching this schema: " + JSON.stringify(responseSchema) + ". Do not include any markdown formatting, just pure JSON. CRITICAL: Your response_text MUST strictly follow the TEXTING FORMATTING RULES (short sentences, double line breaks, max 2-3 sentences per block)." }] },
+        ...conversationHistory
+      ];
+
       const { client, actualModel } = getAIClientForModel(modelName);
       
       const response = await client.models.generateContent({
         model: actualModel,
-        contents: conversationHistory as any,
+        contents: fullContents as any,
         config: {
-          systemInstruction: systemPrompt + "\n\nIMPORTANT: You must output your response in JSON format matching this schema: " + JSON.stringify(responseSchema) + ". Do not include any markdown formatting, just pure JSON.",
           temperature: 0.3,
           tools: [{ googleSearch: {} }],
         }
@@ -158,11 +162,15 @@ export class LLMService {
 
       const { client, actualModel } = getAIClientForModel('FP Pro'); // Use pro for backend logic by default
       
+      const fullContents = [
+        { role: 'user', parts: [{ text: systemPrompt + "\n\nCRITICAL: Your response_text MUST strictly follow the TEXTING FORMATTING RULES (short sentences, double line breaks, max 2-3 sentences per block)." }] },
+        ...conversationHistory
+      ];
+
       const response = await client.models.generateContent({
         model: actualModel,
-        contents: conversationHistory as any,
+        contents: fullContents as any,
         config: {
-          systemInstruction: systemPrompt,
           responseMimeType: 'application/json',
           responseSchema: responseSchema,
           temperature: 0.3, 
