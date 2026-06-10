@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Mic, Plus, Menu, Globe, Image, ThumbsUp, ThumbsDown, Share2, Copy, Target, Camera, Paperclip, X, ChevronRight, ChevronLeft, Cpu } from "lucide-react";
+import { ArrowUp, Mic, Plus, Menu, Globe, Image, ThumbsUp, ThumbsDown, Share2, Copy, Target, Camera, Paperclip, X, ChevronRight, ChevronLeft, Cpu, Edit, RefreshCw } from "lucide-react";
 
 interface ChatViewProps {
   onOpenSidebar: () => void;
@@ -307,6 +307,27 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
     navigator.clipboard.writeText(txt);
   };
 
+  const handleRetry = useCallback(() => {
+    if (messages.length === 0) return;
+    // Find the last user message
+    let lastUserMessage = null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        lastUserMessage = messages[i];
+        break;
+      }
+    }
+    if (!lastUserMessage) return;
+    
+    // Remove all messages after the last user message
+    const lastUserIndex = messages.indexOf(lastUserMessage);
+    const newMessages = messages.slice(0, lastUserIndex + 1);
+    setMessages(newMessages);
+    
+    // Trigger send with the same text
+    handleSend(lastUserMessage.text);
+  }, [messages, handleSend]);
+
   const isInitial = messages.length === 0;
 
   return (
@@ -450,29 +471,48 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                       
                       {isUser ? (
                         /* User message: Dark bubble with optional files */
-                        <div className="max-w-[80%] bg-[#1e1f20] text-[#e3e3e3] text-[14.5px] leading-relaxed px-5 py-3 rounded-[24px] select-text space-y-2.5">
-                          {m.text && <div>{m.text}</div>}
-                          {m.files && m.files.length > 0 && (
-                            <div className="flex flex-wrap gap-2 pt-1 border-t border-white/5">
-                              {m.files.map((file, fIdx) => (
-                                <a
-                                  key={fIdx}
-                                  href={file.url}
-                                  download={file.name}
-                                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition text-xs text-[#a1a1aa] hover:text-white max-w-full"
-                                >
-                                  {file.type.startsWith("image/") ? (
-                                    <img src={file.url} alt="attached file" className="max-h-[140px] rounded-lg object-cover" />
-                                  ) : (
-                                    <>
-                                      <Paperclip className="size-3.5" />
-                                      <span className="truncate max-w-[140px]">{file.name}</span>
-                                    </>
-                                  )}
-                                </a>
-                              ))}
-                            </div>
-                          )}
+                        <div className="flex flex-col items-end group max-w-[80%]">
+                          <div className="bg-[#1e1f20] text-[#e3e3e3] text-[14.5px] leading-relaxed px-5 py-3 rounded-[24px] select-text space-y-2.5">
+                            {m.text && <div>{m.text}</div>}
+                            {m.files && m.files.length > 0 && (
+                              <div className="flex flex-wrap gap-2 pt-1 border-t border-white/5">
+                                {m.files.map((file, fIdx) => (
+                                  <a
+                                    key={fIdx}
+                                    href={file.url}
+                                    download={file.name}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition text-xs text-[#a1a1aa] hover:text-white max-w-full"
+                                  >
+                                    {file.type.startsWith("image/") ? (
+                                      <img src={file.url} alt="attached file" className="max-h-[140px] rounded-lg object-cover" />
+                                    ) : (
+                                      <>
+                                        <Paperclip className="size-3.5" />
+                                        <span className="truncate max-w-[140px]">{file.name}</span>
+                                      </>
+                                    )}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {/* Actions row for user */}
+                          <div className="flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity text-[#666666]">
+                            <button 
+                              onClick={() => { setInput(m.text); inputRef.current?.focus(); }} 
+                              className="p-1.5 rounded-full hover:bg-white/5 hover:text-white transition-colors" 
+                              title="Edit"
+                            >
+                              <Edit className="size-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => copyToClipboard(m.text)} 
+                              className="p-1.5 rounded-full hover:bg-white/5 hover:text-white transition-colors" 
+                              title="Copy"
+                            >
+                              <Copy className="size-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         /* FP message: Bubbleless raw text */
@@ -489,6 +529,13 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                               title="Copy parameters"
                             >
                               <Copy className="size-3.5" />
+                            </button>
+                            <button 
+                              onClick={handleRetry}
+                              className="p-1.5 rounded-full hover:bg-white/5 hover:text-white cursor-pointer transition-colors"
+                              title="Regenerate"
+                            >
+                              <RefreshCw className="size-3.5" />
                             </button>
                             <button className="p-1.5 rounded-full hover:bg-white/5 hover:text-white cursor-pointer transition-colors">
                               <ThumbsUp className="size-3.5" />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Search, Archive, LogOut, MoreVertical, Trash2 } from "lucide-react";
+import { supabase } from "@/utils/supabase/client";
 
 interface ChatThread {
   id: string;
@@ -30,6 +31,18 @@ export function Sidebar({ onOpenVault, onSignOut, isOpen, setIsOpen }: SidebarPr
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [historyData, setHistoryData] = useState<HistoryGroup[]>([]);
   const [activeChatMenu, setActiveChatMenu] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("Operator");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || "Operator";
+        setUserName(name);
+      }
+    };
+    fetchUser();
+  }, []);
 
   // Close menu on click outside
   useEffect(() => {
@@ -362,12 +375,12 @@ export function Sidebar({ onOpenVault, onSignOut, isOpen, setIsOpen }: SidebarPr
               <div className="flex items-center gap-2.5 min-w-0">
                 {/* Profile letter avatar */}
                 <div className="size-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                  <span className="text-[11px] font-bold text-white">U</span>
+                  <span className="text-[11px] font-bold text-white text-transform uppercase">{userName.charAt(0)}</span>
                 </div>
                 {isOpen && (
                   <div className="flex flex-col min-w-0 text-left">
                     <span className="font-sans text-[12px] text-white font-semibold truncate leading-tight">
-                      Operator
+                      {userName}
                     </span>
                     <span className="font-sans text-[10px] text-[#666666] mt-0.5 leading-none">
                       Free plan

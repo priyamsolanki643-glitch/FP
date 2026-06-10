@@ -171,8 +171,8 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
         }}
       >
         <div className="flex items-center gap-3">
-          <button onClick={() => setIsAuthOpen(true)} className="btn-signin-green">Sign in</button>
-          <button onClick={() => setIsAuthOpen(true)} className="btn-login-green">Log in</button>
+          <button onClick={() => { setAuthMode("signup"); setIsAuthOpen(true); }} className="btn-signin-green">Sign in</button>
+          <button onClick={() => { setAuthMode("login"); setIsAuthOpen(true); }} className="btn-login-green">Log in</button>
         </div>
       </header>
 
@@ -222,7 +222,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
         </div>
       </main>
 
-      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={handleAuthSuccess} />}
+      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} onSuccess={handleAuthSuccess} initialMode={authMode} />}
 
       {/* ── Empty/Hidden Clean Footer ── */}
       <footer className="px-6 py-6 md:px-12 relative z-10 h-10 w-full" />
