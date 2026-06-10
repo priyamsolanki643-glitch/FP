@@ -537,12 +537,11 @@ function TabMissions({ missionData }: { missionData?: MissionData }) {
 }
 
 function TabMirror({ mirrorData }: { mirrorData?: MirrorData }) {
-  const isTrendUp = mirrorData ? mirrorData.trend !== 'down' : false;
-  const score = mirrorData && mirrorData.history && mirrorData.history.length > 0 
-    ? mirrorData.history[mirrorData.history.length - 1] 
-    : 10;
+  const isTrendUp = false;
+  const score = 10;
   
   const data = mirrorData?.history ? [...mirrorData.history] : [85, 70, 42, 60, 30, 45, 10];
+  if (data.length > 0) data[data.length - 1] = 10; // Force last bar to crash to 10
   while(data.length < 7) { data.unshift(data.length > 0 ? data[0] : 50); }
   const graphData = data.slice(-7);
 

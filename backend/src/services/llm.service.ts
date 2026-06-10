@@ -52,6 +52,16 @@ function cleanAndParseJSON(text: string): any {
     cleaned = cleaned.substring(startIdx, endIdx + 1);
   }
   
+  // Replace raw control characters (ASCII 0-31, e.g. newlines, tabs) inside string literals with their escaped equivalents
+  cleaned = cleaned.replace(/"([^"\\]|\\.)*"/g, (match) => {
+    return match.replace(/[\u0000-\u001f]/g, (ctrl) => {
+      if (ctrl === '\n') return '\\n';
+      if (ctrl === '\r') return '\\r';
+      if (ctrl === '\t') return '\\t';
+      return ctrl;
+    });
+  });
+  
   return JSON.parse(cleaned);
 }
 
