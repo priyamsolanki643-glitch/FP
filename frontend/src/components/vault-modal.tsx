@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Lock, X, TrendingUp, CheckCircle, Target, ArrowRight, ArrowUpRight, Trophy, AlertTriangle, Radio, ChevronLeft, FileText, Download, Share2, HelpCircle, Zap, Crosshair, Users
 } from "lucide-react";
