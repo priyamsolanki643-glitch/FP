@@ -37,60 +37,19 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
     const isMobile = window.innerWidth < 768;
     let sphereRadius = 100; // Will be set in handleResize
     
-    // 1) Create 3 Intersecting Orbital Belts (The Gyro)
-    const numOrbits = 3;
-    const particlesPerOrbit = isMobile ? 150 : 200; // Optimized density for small logo
-    
-    for (let orbit = 0; orbit < numOrbits; orbit++) {
-      const orbitTiltY = (orbit * Math.PI * 2) / numOrbits; // 0, 120, 240 degrees
-      const orbitTiltX = Math.PI / 4; // 45 degree tilt for a 3D aesthetic
-
-      for (let i = 0; i < particlesPerOrbit; i++) {
-        const angle = (i / particlesPerOrbit) * Math.PI * 2;
-        
-        // Add subtle noise for "particle belt" thickness
-        const radiusNoise = 1 + (Math.random() - 0.5) * 0.08;
-        
-        // Base circle in X-Y plane
-        const x = Math.cos(angle) * radiusNoise;
-        const y = Math.sin(angle) * radiusNoise;
-        const z = (Math.random() - 0.5) * 0.08; // Thickness
-
-        // Apply tilt X
-        const cosTiltX = Math.cos(orbitTiltX);
-        const sinTiltX = Math.sin(orbitTiltX);
-        const x1 = x;
-        const y1 = y * cosTiltX - z * sinTiltX;
-        const z1 = z * cosTiltX + y * sinTiltX;
-
-        // Apply tilt Y
-        const cosTiltY = Math.cos(orbitTiltY);
-        const sinTiltY = Math.sin(orbitTiltY);
-        const finalX = x1 * cosTiltY - z1 * sinTiltY;
-        const finalY = y1;
-        const finalZ = z1 * cosTiltY + x1 * sinTiltY;
-
-        particles.push({
-          originalX: finalX,
-          originalY: finalY,
-          originalZ: finalZ
-        });
-      }
-    }
-
-    // 2) Create a Dense Inner Quantum Core
-    const coreParticles = isMobile ? 60 : 100;
+    // Create a perfect solid sphere (Fibonacci distribution)
+    const particleCount = isMobile ? 600 : 1000;
     const phi = Math.PI * (3 - Math.sqrt(5)); // Golden angle
-    for (let i = 0; i < coreParticles; i++) {
-      const y = 1 - (i / (coreParticles - 1)) * 2; 
+
+    for (let i = 0; i < particleCount; i++) {
+      const y = 1 - (i / (particleCount - 1)) * 2; 
       const radiusAtY = Math.sqrt(1 - y * y); 
       const theta = phi * i; 
 
-      const coreScale = 0.25; // Core is 25% the size of orbits
       particles.push({
-        originalX: Math.cos(theta) * radiusAtY * coreScale,
-        originalY: y * coreScale,
-        originalZ: Math.sin(theta) * radiusAtY * coreScale,
+        originalX: Math.cos(theta) * radiusAtY,
+        originalY: y,
+        originalZ: Math.sin(theta) * radiusAtY,
       });
     }
 
@@ -135,7 +94,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
       canvas.width = width;
       canvas.height = height;
       // Fits beautifully inside the logo container
-      sphereRadius = width * 0.38;
+      sphereRadius = width * 0.42;
     };
     handleResize(); // Initialize correct responsive size
 
@@ -191,8 +150,8 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
         // Exponential fade: front particles are bright, back particles fade fast
         const opacity = Math.max(0.05, 1 - Math.pow(depthRatio, 1.5));
         
-        // Finer dots for the high-res logo feel
-        const radius = Math.max(0.4, 1.8 * scale * opacity);
+        // Solid sphere dots
+        const radius = Math.max(0.5, 2.0 * scale * opacity);
 
         // Pure White / Titanium Aesthetics (Ultimate Trillion-Dollar Minimalism)
         const r = 255, g = 255, b = 255;
@@ -414,8 +373,8 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
             willChange: "transform, opacity",
           }}
         >
-          {/* 3D Quantum Gyro (Moved from background to a premium interactive logo above text) */}
-          <div className="relative w-[200px] h-[200px] md:w-[260px] md:h-[260px] mx-auto mb-2 flex items-center justify-center cursor-crosshair">
+          {/* 3D Gyro Sphere (Absolutely positioned above so it NEVER pushes text down) */}
+          <div className="absolute left-1/2 -translate-x-1/2 bottom-[100%] mb-1 w-[180px] h-[180px] md:w-[220px] md:h-[220px] flex items-center justify-center cursor-crosshair pointer-events-auto">
             <canvas
               ref={canvasRef}
               className="absolute inset-0 w-full h-full pointer-events-auto"
