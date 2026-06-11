@@ -26,14 +26,7 @@ export async function executeWithRotation(
     throw new Error('No AI API Keys configured');
   }
 
-  // Keep only verified / intentional fallbacks.
-  // Put your preferred production model first.
-  const fallbackModels = [
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
-    'gemini-2.0-flash-lite-preview-02-05'
-  ];
+  const actualModel = payload.model || 'gemini-2.5-flash';
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -102,80 +95,72 @@ export async function executeWithRotation(
   };
 
   let lastError: any = null;
-
-  // Better strategy:
-  // For each model, try all keys first.
-  // Only then move to the next model.
   let attempt = 0;
 
-  for (const actualModel of fallbackModels) {
-    for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
-      if (attempt >= maxRetries) break;
-      attempt++;
+  for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+    if (attempt >= maxRetries) break;
+    attempt++;
 
-      const key = keys[keyIndex];
-      const cooldownId = `${actualModel}-${keyIndex}`;
+    const key = keys[keyIndex];
+    const cooldownId = `${actualModel}-${keyIndex}`;
+    
+    // If this specific key+model is in a cooldown period, instantly skip it
+    const cooldownUntil = globalCooldownMap.get(cooldownId);
+    if (cooldownUntil && Date.now() < cooldownUntil) {
+      console.log(`[LLM Proxy] Skipping model=${actualModel} key=${keyIndex + 1} (in cooldown for ${Math.ceil((cooldownUntil - Date.now())/1000)}s)`);
+      continue;
+    }
+
+    const client = new GoogleGenAI({ apiKey: key });
+
+    try {
+      const attemptPayload = { ...payload, model: actualModel };
+
+      console.log(
+        `[LLM Proxy] Attempt ${attempt}/${maxRetries} | model=${actualModel} | key=${keyIndex + 1}/${keys.length}`
+      );
+
+      const result = await client.models.generateContent(attemptPayload as any);
       
-      // If this specific key+model is in a cooldown period, instantly skip it
-      const cooldownUntil = globalCooldownMap.get(cooldownId);
-      if (cooldownUntil && Date.now() < cooldownUntil) {
-        console.log(`[LLM Proxy] Skipping model=${actualModel} key=${keyIndex + 1} (in cooldown for ${Math.ceil((cooldownUntil - Date.now())/1000)}s)`);
+      // Success! Clear any existing cooldown just in case
+      globalCooldownMap.delete(cooldownId);
+      return result;
+      
+    } catch (err: any) {
+      lastError = err;
+      const message = getErrorMessage(err);
+
+      console.warn(
+        `[LLM Proxy] Failed | attempt=${attempt}/${maxRetries} | model=${actualModel} | key=${keyIndex + 1}/${keys.length} | error=${message}`
+      );
+
+      // Invalid model? Skip immediately.
+      if (isModelError(message)) {
+        console.warn(`[LLM Proxy] Skipping invalid/unsupported model: ${actualModel}`);
+        break; // Breaks the key loop because the model itself is bad.
+      }
+
+      // Quota error? Set the cooldown map so we don't try this key+model again for a while!
+      if (isQuotaError(message)) {
+        const retryDelay = parseRetryDelayMs(message) ?? 60_000;
+        globalCooldownMap.set(cooldownId, Date.now() + retryDelay);
+        console.warn(
+          `[LLM Proxy] Quota hit for model=${actualModel}, key=${keyIndex + 1}. Cooldown set for ${retryDelay}ms. Moving to next key.`
+        );
+        // Do NOT sleep here, just continue to the next key instantly!
         continue;
       }
 
-      const client = new GoogleGenAI({ apiKey: key });
-
-      try {
-        const attemptPayload = { ...payload, model: actualModel };
-
-        console.log(
-          `[LLM Proxy] Attempt ${attempt}/${maxRetries} | model=${actualModel} | key=${keyIndex + 1}/${keys.length}`
-        );
-
-        const result = await client.models.generateContent(attemptPayload as any);
-        
-        // Success! Clear any existing cooldown just in case
-        globalCooldownMap.delete(cooldownId);
-        return result;
-        
-      } catch (err: any) {
-        lastError = err;
-        const message = getErrorMessage(err);
-
-        console.warn(
-          `[LLM Proxy] Failed | attempt=${attempt}/${maxRetries} | model=${actualModel} | key=${keyIndex + 1}/${keys.length} | error=${message}`
-        );
-
-        // Invalid model? Skip this model entirely for all keys.
-        if (isModelError(message)) {
-          console.warn(`[LLM Proxy] Skipping invalid/unsupported model: ${actualModel}`);
-          break;
-        }
-
-        // Quota error? Set the cooldown map so we don't try this key+model again for a while!
-        if (isQuotaError(message)) {
-          const retryDelay = parseRetryDelayMs(message) ?? 60_000;
-          globalCooldownMap.set(cooldownId, Date.now() + retryDelay);
-          console.warn(
-            `[LLM Proxy] Quota hit for model=${actualModel}, key=${keyIndex + 1}. Cooldown set for ${retryDelay}ms. Moving to next key.`
-          );
-          // Do NOT sleep here, just continue to the next key instantly!
-          continue;
-        }
-
-        // Infra/transient error? Short backoff before trying next.
-        if (isRetryableInfraError(message)) {
-          const backoff = Math.min(1500 * attempt, 8000);
-          await sleep(backoff);
-          continue;
-        }
-
-        // Non-retryable unknown error: move to next key quickly.
-        await sleep(400);
+      // Infra/transient error? Short backoff before trying next.
+      if (isRetryableInfraError(message)) {
+        const backoff = Math.min(1500 * attempt, 8000);
+        await sleep(backoff);
+        continue;
       }
-    }
 
-    if (attempt >= maxRetries) break;
+      // Non-retryable unknown error: move to next key quickly.
+      await sleep(400);
+    }
   }
 
   throw lastError;
