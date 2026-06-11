@@ -294,10 +294,7 @@ YOU MUST IMPLEMENT THE FOLLOWING ADAPTIVE ENGINE RULES:
         }
       };
 
-      const { client, actualModel } = getAIClientForModel('FP Pro');
-      
-      const response = await client.models.generateContent({
-        model: actualModel,
+      const response = await executeWithRotation({
         contents: [{ role: 'user', parts: [{ text: strictPrompt }] }] as any,
         config: {
           responseMimeType: 'application/json',
@@ -347,10 +344,7 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
         }
       };
 
-      const { client, actualModel } = getAIClientForModel('FP Elite');
-      
-      const response = await client.models.generateContent({
-        model: actualModel,
+      const response = await executeWithRotation({
         contents: [{ role: 'user', parts: [{ text: strictPrompt + "\n\nIMPORTANT: You must return the output in JSON format matching the schema: Array of objects with properties { id: string, title: string, category: string, opportunityScore: number, capitalRequired: number, timeToFirstRevenue: number, whyThisForThisUser: string }. Output ONLY valid JSON." }] }] as any,
         config: {
           temperature: 0.4,
@@ -370,7 +364,13 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
 
   static async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const { client } = getAIClientForModel('FP Pro');
+      const keys = [
+        ...(process.env.AI_KEYS ? process.env.AI_KEYS.split(',') : []),
+        process.env.GEMINI_API_KEY,
+        process.env.GOOGLE_API_KEY,
+        ...HARDCODED_KEYS
+      ].map(k => k?.trim()).filter(Boolean) as string[];
+      const client = new GoogleGenAI({ apiKey: keys[0] });
       const response = await client.models.embedContent({
         model: 'text-embedding-004',
         contents: text,
@@ -429,10 +429,7 @@ Extract the parameters and output ONLY a JSON object matching the requested sche
         required: ['isComplete', 'declaredGoal', 'liquidCapital', 'region', 'dailyUninterruptedHours', 'rawSkillStrings', 'pathPreference']
       };
 
-      const { client, actualModel } = getAIClientForModel('FP Pro');
-      
-      const response = await client.models.generateContent({
-        model: actualModel,
+      const response = await executeWithRotation({
         contents: [{ role: 'user', parts: [{ text: prompt }] }] as any,
         config: {
           responseMimeType: 'application/json',
