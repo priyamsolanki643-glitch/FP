@@ -15,50 +15,151 @@ export async function executeWithRotation(
     process.env.GEMINI_API_KEY,
     process.env.GOOGLE_API_KEY,
     ...HARDCODED_KEYS
-  ].map(k => k?.trim()).filter(Boolean) as string[];
+  ]
+    .map(k => k?.trim())
+    .filter(Boolean) as string[];
 
   if (keys.length === 0) {
     throw new Error('No AI API Keys configured');
   }
 
-  // ✅ Fixed: Removed non-existent 'gemini-3.1-flash-lite'
+  // Keep only verified / intentional fallbacks.
+  // Put your preferred production model first.
   const fallbackModels = [
     'gemini-2.0-flash',
     'gemini-1.5-flash',
     'gemini-1.5-pro',
-    'gemini-2.0-flash-lite',    // ✅ correct alias
-    'gemini-1.0-pro',           // ✅ stable fallback
+    'gemini-2.0-flash-lite-preview-02-05'
   ];
+
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const getErrorMessage = (err: any): string => {
+    if (!err) return 'Unknown error';
+    return (
+      err?.message ||
+      err?.error?.message ||
+      err?.statusText ||
+      JSON.stringify(err)
+    );
+  };
+
+  const parseRetryDelayMs = (message: string): number | null => {
+    if (!message) return null;
+
+    // Matches: "Please retry in 55.736539699s."
+    const retryInMatch = message.match(/retry in\s+([\d.]+)s/i);
+    if (retryInMatch) {
+      return Math.ceil(parseFloat(retryInMatch[1]) * 1000) + 500;
+    }
+
+    // Matches generic "Try again in Xs"
+    const tryAgainMatch = message.match(/try again in\s+([\d.]+)s/i);
+    if (tryAgainMatch) {
+      return Math.ceil(parseFloat(tryAgainMatch[1]) * 1000) + 500;
+    }
+
+    return null;
+  };
+
+  const isQuotaError = (message: string): boolean => {
+    const m = message.toLowerCase();
+    return (
+      m.includes('quota exceeded') ||
+      m.includes('resource_exhausted') ||
+      m.includes('429') ||
+      m.includes('rate limit') ||
+      m.includes('too many requests')
+    );
+  };
+
+  const isModelError = (message: string): boolean => {
+    const m = message.toLowerCase();
+    return (
+      m.includes('model not found') ||
+      m.includes('unsupported model') ||
+      m.includes('is not found for api version') ||
+      m.includes('invalid model')
+    );
+  };
+
+  const isRetryableInfraError = (message: string): boolean => {
+    const m = message.toLowerCase();
+    return (
+      m.includes('503') ||
+      m.includes('overloaded') ||
+      m.includes('unavailable') ||
+      m.includes('internal error') ||
+      m.includes('deadline exceeded') ||
+      m.includes('timed out') ||
+      m.includes('timeout') ||
+      m.includes('econnreset') ||
+      m.includes('socket hang up')
+    );
+  };
 
   let lastError: any = null;
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const key = keys[attempt % keys.length];
-    const actualModel = fallbackModels[attempt % fallbackModels.length];
-    const client = new GoogleGenAI({ apiKey: key });
+  // Better strategy:
+  // For each model, try all keys first.
+  // Only then move to the next model.
+  let attempt = 0;
 
-    try {
-      const attemptPayload = { ...payload, model: actualModel };
-      return await client.models.generateContent(attemptPayload as any);
-    } catch (err: any) {
-      lastError = err;
-      const msg: string = err.message || '';
+  for (const actualModel of fallbackModels) {
+    for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+      if (attempt >= maxRetries) break;
+      attempt++;
 
-      // ✅ Parse the retry delay from the Gemini error message
-      const retryMatch = msg.match(/retry in ([\d.]+)s/i);
-      const waitMs = retryMatch
-        ? Math.ceil(parseFloat(retryMatch[1]) * 1000) + 500  // add 500ms buffer
-        : 1500;
+      const key = keys[keyIndex];
+      const client = new GoogleGenAI({ apiKey: key });
 
-      console.warn(
-        `[LLM Proxy] Attempt ${attempt + 1}/${maxRetries} failed` +
-        ` with model ${actualModel}. Waiting ${waitMs}ms. Error: ${msg}`
-      );
+      try {
+        const attemptPayload = { ...payload, model: actualModel };
 
-      await new Promise(resolve => setTimeout(resolve, waitMs));
+        console.log(
+          `[LLM Proxy] Attempt ${attempt}/${maxRetries} | model=${actualModel} | key=${keyIndex + 1}/${keys.length}`
+        );
+
+        return await client.models.generateContent(attemptPayload as any);
+      } catch (err: any) {
+        lastError = err;
+        const message = getErrorMessage(err);
+
+        console.warn(
+          `[LLM Proxy] Failed | attempt=${attempt}/${maxRetries} | model=${actualModel} | key=${keyIndex + 1}/${keys.length} | error=${message}`
+        );
+
+        // Invalid model? Skip this model entirely.
+        if (isModelError(message)) {
+          console.warn(`[LLM Proxy] Skipping invalid/unsupported model: ${actualModel}`);
+          break;
+        }
+
+        // Quota error? Respect provider retry hint if available.
+        if (isQuotaError(message)) {
+          const retryDelay = parseRetryDelayMs(message) ?? 60_000;
+          console.warn(
+            `[LLM Proxy] Quota hit for model=${actualModel}, key=${keyIndex + 1}. Waiting ${retryDelay}ms before continuing rotation.`
+          );
+          await sleep(retryDelay);
+          continue;
+        }
+
+        // Infra/transient error? Short backoff.
+        if (isRetryableInfraError(message)) {
+          const backoff = Math.min(1500 * attempt, 8000);
+          await sleep(backoff);
+          continue;
+        }
+
+        // Non-retryable unknown error: move to next key quickly.
+        await sleep(400);
+      }
     }
+
+    if (attempt >= maxRetries) break;
   }
-  
+
   throw lastError;
 }
 
