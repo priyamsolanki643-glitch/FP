@@ -4,6 +4,9 @@ import { ContextMatrix, CapabilityVector } from '../engine/types';
 
 const HARDCODED_KEYS: string[] = [];
 
+// Track cooldowns across the entire service instance: key = `${model}-${keyIndex}`, value = timestamp in ms when cooldown expires
+const globalCooldownMap = new Map<string, number>();
+
 export async function executeWithRotation(
   payload: any,
   maxRetries = 15
@@ -111,6 +114,15 @@ export async function executeWithRotation(
       attempt++;
 
       const key = keys[keyIndex];
+      const cooldownId = `${actualModel}-${keyIndex}`;
+      
+      // If this specific key+model is in a cooldown period, instantly skip it
+      const cooldownUntil = globalCooldownMap.get(cooldownId);
+      if (cooldownUntil && Date.now() < cooldownUntil) {
+        console.log(`[LLM Proxy] Skipping model=${actualModel} key=${keyIndex + 1} (in cooldown for ${Math.ceil((cooldownUntil - Date.now())/1000)}s)`);
+        continue;
+      }
+
       const client = new GoogleGenAI({ apiKey: key });
 
       try {
@@ -120,7 +132,12 @@ export async function executeWithRotation(
           `[LLM Proxy] Attempt ${attempt}/${maxRetries} | model=${actualModel} | key=${keyIndex + 1}/${keys.length}`
         );
 
-        return await client.models.generateContent(attemptPayload as any);
+        const result = await client.models.generateContent(attemptPayload as any);
+        
+        // Success! Clear any existing cooldown just in case
+        globalCooldownMap.delete(cooldownId);
+        return result;
+        
       } catch (err: any) {
         lastError = err;
         const message = getErrorMessage(err);
@@ -129,23 +146,24 @@ export async function executeWithRotation(
           `[LLM Proxy] Failed | attempt=${attempt}/${maxRetries} | model=${actualModel} | key=${keyIndex + 1}/${keys.length} | error=${message}`
         );
 
-        // Invalid model? Skip this model entirely.
+        // Invalid model? Skip this model entirely for all keys.
         if (isModelError(message)) {
           console.warn(`[LLM Proxy] Skipping invalid/unsupported model: ${actualModel}`);
           break;
         }
 
-        // Quota error? Respect provider retry hint if available.
+        // Quota error? Set the cooldown map so we don't try this key+model again for a while!
         if (isQuotaError(message)) {
           const retryDelay = parseRetryDelayMs(message) ?? 60_000;
+          globalCooldownMap.set(cooldownId, Date.now() + retryDelay);
           console.warn(
-            `[LLM Proxy] Quota hit for model=${actualModel}, key=${keyIndex + 1}. Waiting ${retryDelay}ms before continuing rotation.`
+            `[LLM Proxy] Quota hit for model=${actualModel}, key=${keyIndex + 1}. Cooldown set for ${retryDelay}ms. Moving to next key.`
           );
-          await sleep(retryDelay);
+          // Do NOT sleep here, just continue to the next key instantly!
           continue;
         }
 
-        // Infra/transient error? Short backoff.
+        // Infra/transient error? Short backoff before trying next.
         if (isRetryableInfraError(message)) {
           const backoff = Math.min(1500 * attempt, 8000);
           await sleep(backoff);
