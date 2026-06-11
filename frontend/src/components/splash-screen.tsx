@@ -94,8 +94,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           border-top: 1px solid rgba(255,255,255,0.8);
           border-right: 1px solid rgba(255,255,255,0.3);
           box-shadow: inset 0 0 10px rgba(255,255,255,0.02),
-                      -1px 0 3px rgba(220, 38, 38, 0.5), /* PW Red split */
-                      1px 0 3px rgba(37, 99, 235, 0.5);  /* PW Blue split */
+                      -1px 0 3px rgba(255, 255, 255, 0.2), /* Subtle white blur */
+                      1px 0 3px rgba(255, 255, 255, 0.4);  /* Sharp white edge */
         }
         /* Exact timings from chat-view */
         .ring-1 { animation: spin1 1.8s linear infinite; }
