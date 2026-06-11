@@ -543,9 +543,29 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
       }
     });
 
-  } catch (error: any) {
-    console.error('Interaction Error:', error);
-    return c.json({ error: error.message }, 500);
+  } catch (err: any) {
+    const rawMessage = getAIErrorMessage(err);
+
+    console.error('INTERACTION_ROUTE /message ERROR:', {
+      userId: actualUserId,
+      thread_id: thread_id,
+      error: rawMessage
+    });
+
+    const safeText = toUserSafeAIText(err);
+
+    return c.json(
+      {
+        status: 'success',
+        data: {
+          engine_result: { type: 'chat_response', data: {} },
+          ai_response: {
+            response_text: safeText
+          }
+        }
+      },
+      200
+    );
   }
 });
 
