@@ -50,93 +50,56 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           background-image: none !important;
         }
 
-        .grid-floor {
-          position: absolute;
-          width: 200vw;
-          height: 100vh;
-          bottom: -30vh;
-          left: -50vw;
-          background-image: 
-            linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
-          background-size: 60px 60px;
-          transform: perspective(400px) rotateX(70deg);
-          mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 50%);
-          -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 50%);
-          pointer-events: none;
-        }
-
         .eclipse-glow {
           position: absolute;
-          top: -20vh;
+          bottom: 5vh;
           left: 50%;
           transform: translateX(-50%);
-          width: 100vw;
-          height: 100vw;
-          max-width: 1200px;
-          max-height: 1200px;
-          background: radial-gradient(circle, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0) 60%);
+          width: 80vw;
+          height: 80vw;
+          max-width: 600px;
+          max-height: 600px;
+          background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%);
           border-radius: 50%;
           pointer-events: none;
-          animation: eclipsePulse 6s ease-in-out infinite alternate;
-        }
-        @keyframes eclipsePulse {
-          0% { transform: translateX(-50%) scale(1); opacity: 0.6; }
-          100% { transform: translateX(-50%) scale(1.1); opacity: 1; }
         }
 
-        .shimmer-text-lumensky {
+        .gradient-text-lumensky {
           color: transparent;
-          background: linear-gradient(90deg, #444 0%, #fff 40%, #fff 60%, #444 100%);
-          background-size: 200% auto;
+          background: linear-gradient(to right, #666666 0%, #ffffff 100%);
           -webkit-background-clip: text;
           background-clip: text;
-          animation: shimmer 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-        @keyframes shimmer {
-          0%  { background-position: -200% 0; }
-          to  { background-position:  200% 0; }
         }
 
-        /* Psychological Dominance CTA: Blinding White -> Transparent */
+        /* Psychological Dominance CTA: Black Pill with Glow */
         .btn-lumensky-core {
           position: relative;
           display: inline-flex;
           align-items: center;
           gap: 12px;
-          padding: 18px 48px;
+          padding: 16px 42px;
           border-radius: 9999px;
-          background: #ffffff;
-          color: #000000;
+          background: #000000;
+          color: #ffffff;
           font-family: 'Inter', sans-serif;
-          font-weight: 700;
+          font-weight: 600;
           font-size: 16px;
           letter-spacing: 0.02em;
-          border: 1px solid #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.2);
           cursor: pointer;
-          transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
           overflow: hidden;
           z-index: 10;
-          box-shadow: 0 0 40px rgba(255, 255, 255, 0.15), 0 0 80px rgba(255, 255, 255, 0.05);
-          animation: coreBreathe 3s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes coreBreathe {
-          0% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.1); transform: scale(1); }
-          100% { box-shadow: 0 0 60px rgba(255, 255, 255, 0.3), 0 0 100px rgba(255, 255, 255, 0.15); transform: scale(1.02); }
+          box-shadow: 0 10px 40px rgba(255, 255, 255, 0.1);
         }
 
         .btn-lumensky-core:hover {
-          transform: translateY(-2px) scale(1.05) !important;
-          background: transparent;
-          color: #ffffff;
-          border-color: rgba(255, 255, 255, 0.8);
-          box-shadow: 0 10px 50px rgba(255, 255, 255, 0.2);
-          animation: none;
+          border-color: rgba(255, 255, 255, 0.4);
+          box-shadow: 0 10px 50px rgba(255, 255, 255, 0.15);
         }
 
         .btn-lumensky-core:active {
-          transform: translateY(1px) scale(0.98) !important;
+          transform: translateY(1px) scale(0.98);
         }
 
         .btn-lumensky-core .arrow-icon {
@@ -220,7 +183,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
             
             {/* Second Line - Start executing. */}
             <div 
-              className="shimmer-text-lumensky tracking-tighter pb-2 md:pb-4 leading-[1.15] whitespace-nowrap"
+              className="gradient-text-lumensky tracking-tighter pb-2 md:pb-4 leading-[1.15] whitespace-nowrap"
               style={{ fontSize: "clamp(2.5rem, 12vw, 6.8rem)", fontWeight: 600, marginTop: "-0.05em" }}
             >
               Start executing.
@@ -229,12 +192,12 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
           {/* Subtext */}
           <p className="text-[#a1a1aa] text-[14px] sm:text-[16px] md:text-[19px] leading-relaxed max-w-xl mx-auto mb-10 px-2 font-sans font-normal tracking-wide">
-            A strategist and executioner that converts your ambition into
-            raw, immutable daily action. No fluff. No excuses. No mercy.
+            A strategist and executioner that converts your ambition into raw, immutable daily action. No fluff. No excuses. No mercy.
           </p>
 
           {/* Centered CTA Row */}
           <div className="flex justify-center w-full mt-2">
+            <div className="eclipse-glow"></div>
             <button onClick={handleStart} className="btn-lumensky-core group">
               <span>Get started</span>
               <ArrowRight size={18} className="arrow-icon opacity-80 group-hover:opacity-100" />
