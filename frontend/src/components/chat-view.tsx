@@ -552,7 +552,7 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                           </div>
                         </div>
                       ) : (
-                        /* FP message: Bubbleless raw text */
+                        /* Lumensky message: Bubbleless raw text */
                         <div 
                           className="relative flex-1 space-y-4 select-text min-w-0 max-w-full group cursor-pointer md:cursor-auto"
                           onClick={(e) => handleMessageClick(e, m.id)}
@@ -829,7 +829,7 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
           {/* Subtext info */}
           <div className="mt-3 text-center">
             <span className="font-sans text-[11px] text-[#52525b]">
-              FP is an AI, it can make mistakes.
+              Lumensky is an AI, it can make mistakes.
             </span>
           </div>
 
