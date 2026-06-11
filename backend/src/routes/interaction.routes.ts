@@ -68,6 +68,34 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
     let systemPrompt = '';
     let isTransitioningToExecution = false;
     
+    // --- FAST PATH FOR BASIC GREETINGS ---
+    const msgCleanForBypass = message.toLowerCase().trim();
+    const basicGreetings = ['hi', 'hello', 'hey', 'sup', 'whatsup', 'whats up', 'how are you', 'kaise ho', 'hii', 'hola'];
+    if (message.length < 30 && basicGreetings.some(g => msgCleanForBypass.includes(g))) {
+      console.log(`[Fast Path] Bypassing 13-layer engine for basic greeting: ${message}`);
+      const fastSystemPrompt = "You are Lumensky. The user just said a basic greeting. Reply back with an aggressive, ultra-short, military-style Hinglish greeting (e.g. 'Bol bhai. Action plan ready hai?'). Do not use markdown, keep it under 10 words. Maintain the intense persona.";
+      
+      const smartResponse = await LLMService.generateSmartResponse(
+        actualUserId,
+        fastSystemPrompt,
+        conversationHistory,
+        false,
+        model
+      );
+      
+      await DbService.saveMessage(currentThreadId, actualUserId, 'model', smartResponse.response_text);
+      
+      return c.json({
+        success: true,
+        data: {
+          thread_id: currentThreadId,
+          ai_response: smartResponse,
+          engine_result: { type: 'greeting', data: null }
+        }
+      });
+    }
+    // --- END FAST PATH ---
+
     // Check if user already has locked mission trajectory in DB
     let activeMission = await DbService.getActiveMission(actualUserId);
 
