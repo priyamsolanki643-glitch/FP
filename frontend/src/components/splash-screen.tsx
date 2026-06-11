@@ -148,7 +148,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         
         {/* 3D Gyroscopic Core with Particles */}
-        <div className={`gyro-container mb-12 z-20 ${phase >= 1 ? 'phase-1' : ''}`}>
+        <div className={`gyro-container mb-2 z-20 ${phase >= 1 ? 'phase-1' : ''}`}>
           {/* High Velocity Particles */}
           <div className="particle p1"></div>
           <div className="particle p2"></div>
@@ -162,7 +162,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         </div>
 
         {/* Cinematic Reveal Text */}
-        <div className="lumensky-container mt-16 z-30">
+        <div className="lumensky-container mt-6 z-30">
           <div className={`lumensky-text ${phase >= 2 ? 'phase-2' : ''}`}>
             Lumensky
           </div>
