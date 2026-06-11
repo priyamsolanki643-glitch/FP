@@ -4,7 +4,7 @@ import { ContextMatrix, CapabilityVector } from '../engine/types';
 
 let currentKeyIndex = 0;
 let currentModelIndex = 0;
-const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'];
+const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-flash-latest'];
 
 function getAIClientForModel(modelName?: string, rotate = false): { client: GoogleGenAI, actualModel: string } {
   const keys = process.env.AI_KEYS 
@@ -152,13 +152,10 @@ export class LLMService {
         } catch (err: any) {
           attempts++;
           const errMsg = err?.message?.toLowerCase() || '';
-          if (errMsg.includes('quota') || errMsg.includes('429') || errMsg.includes('rate limit') || errMsg.includes('exceeded')) {
-            console.log(`[LLMService] Quota hit on attempt ${attempts}. Rotating key if available and retrying...`);
-            if (attempts >= maxAttempts) throw err;
-            await this.sleep(1500 * attempts);
-            continue;
-          }
-          throw err;
+          console.log(`[LLMService] Attempt ${attempts} failed. Rotating... Error: ${errMsg}`);
+          if (attempts >= maxAttempts) throw err;
+          await this.sleep(1000 * attempts);
+          continue;
         }
       }
 
@@ -212,13 +209,10 @@ export class LLMService {
         } catch (err: any) {
           attempts++;
           const errMsg = err?.message?.toLowerCase() || '';
-          if (errMsg.includes('quota') || errMsg.includes('429') || errMsg.includes('rate limit') || errMsg.includes('exceeded')) {
-            console.log(`[LLMService] Quota hit on attempt ${attempts}. Rotating key if available and retrying...`);
-            if (attempts >= maxAttempts) throw err;
-            await this.sleep(1500 * attempts);
-            continue;
-          }
-          throw err;
+          console.log(`[LLMService] Attempt ${attempts} failed. Rotating... Error: ${errMsg}`);
+          if (attempts >= maxAttempts) throw err;
+          await this.sleep(1000 * attempts);
+          continue;
         }
       }
 
