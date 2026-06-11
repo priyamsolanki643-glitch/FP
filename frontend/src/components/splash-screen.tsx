@@ -62,6 +62,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           border: 1px solid rgba(255,255,255,1);
           opacity: 0;
           transform: translate3d(0, 0, 0) scale(0.5);
+          box-shadow: 0 0 10px rgba(255,255,255,0.5);
           will-change: transform, opacity;
         }
         .gyro-container.phase-1 .gyro-shockwave {
@@ -88,6 +89,9 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           border: 1px solid rgba(255,255,255,0.06);
           border-top: 1px solid rgba(255,255,255,0.8);
           border-right: 1px solid rgba(255,255,255,0.3);
+          box-shadow: inset 0 0 10px rgba(255,255,255,0.02),
+                      -1px 0 3px rgba(255, 255, 255, 0.2), 
+                      1px 0 3px rgba(255, 255, 255, 0.4);
           will-change: transform;
         }
         /* Exact timings from chat-view */
@@ -129,10 +133,18 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         }
         
         @keyframes corePulse {
-          0% { transform: translate3d(0, 0, 0) scale(0.5); opacity: 0.3; }
-          100% { transform: translate3d(0, 0, 0) scale(1.5); opacity: 1; }
+          0% { transform: translate3d(0, 0, 0) scale(0.5); opacity: 0.3; box-shadow: 0 0 2px rgba(255,255,255,0.1); }
+          100% { transform: translate3d(0, 0, 0) scale(1.5); opacity: 1; box-shadow: 0 0 15px rgba(255,255,255,1); }
         }
 
+        .lumensky-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 60px; /* fixed height to allow absolute overlapping */
+        }
+        
         .lumensky-text {
           font-family: 'Inter', sans-serif;
           font-weight: 300;
@@ -144,26 +156,47 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           color: transparent;
           -webkit-background-clip: text;
           background-clip: text;
+          position: absolute;
+          white-space: nowrap;
           opacity: 0;
           transform: translate3d(0, 25px, 0) scale(0.9);
-          transition: opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1), 
+          transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                      letter-spacing 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: transform, letter-spacing, opacity;
+        }
+        
+        .lumensky-blur {
+          filter: blur(15px); /* Static blur, no animation on filter */
+        }
+        .lumensky-blur.phase-2 {
+          transform: translate3d(0, 0, 0) scale(1);
+          letter-spacing: 0.45em;
+          animation: blurFadeOut 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes blurFadeOut {
+          0% { opacity: 0.8; }
+          100% { opacity: 0; }
+        }
+
+        .lumensky-sharp {
+          transition: opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1),
                       transform 1.4s cubic-bezier(0.16, 1, 0.3, 1), 
                       letter-spacing 1.4s cubic-bezier(0.16, 1, 0.3, 1);
-          will-change: transform, opacity, letter-spacing;
         }
-        .lumensky-text.phase-2 {
+        .lumensky-sharp.phase-2 {
           opacity: 1;
           transform: translate3d(0, 0, 0) scale(1);
           letter-spacing: 0.45em; /* Snap into perfect focus */
-          animation: textShimmer 3s ease-in-out infinite alternate;
+          animation: textShimmer 3s ease-in-out infinite alternate 1.4s;
         }
 
         .text-energy-blade {
           position: absolute;
           width: 200%;
-          height: 1px;
+          height: 2px;
           background: rgba(255, 255, 255, 1);
-          box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); /* Performance friendly flare */
+          box-shadow: 0 0 30px 10px rgba(255, 255, 255, 0.9),
+                      0 0 60px 15px rgba(255, 255, 255, 0.5); /* Pure white optical flare */
           opacity: 0;
           top: 50%;
           left: 50%;
@@ -176,7 +209,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         }
         @keyframes bladeStrike {
           0% { transform: translate3d(-50%, -50%, 0) scaleX(0); opacity: 1; }
-          20% { transform: translate3d(-50%, -50%, 0) scaleX(1); opacity: 1; height: 1px; }
+          20% { transform: translate3d(-50%, -50%, 0) scaleX(1); opacity: 1; height: 2px; }
           100% { transform: translate3d(-50%, -50%, 0) scaleX(0); opacity: 0; height: 0px; }
         }
 
@@ -205,10 +238,20 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         </div>
 
         {/* Lumensky Wordmark Container with Energy Blade */}
-        <div className="relative flex justify-center items-center">
+        <div className="relative lumensky-container w-full">
           <div className={`text-energy-blade ${phase >= 2 ? 'phase-2' : ''}`}></div>
+          
+          {/* Static Blur Overlay (Fades out) */}
           <div 
-            className={`lumensky-text z-10 pl-[0.5em] ${phase >= 2 ? 'phase-2' : ''}`}
+            className={`lumensky-text lumensky-blur z-10 pl-[0.5em] ${phase >= 2 ? 'phase-2' : ''}`}
+            aria-hidden="true"
+          >
+            Lumensky
+          </div>
+
+          {/* Sharp Text (Fades in) */}
+          <div 
+            className={`lumensky-text lumensky-sharp z-10 pl-[0.5em] ${phase >= 2 ? 'phase-2' : ''}`}
           >
             Lumensky
           </div>
