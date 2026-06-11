@@ -2,13 +2,11 @@ import '../utils/env';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { ContextMatrix, CapabilityVector } from '../engine/types';
 
-const HARDCODED_KEYS = [
-  "AIzaSyCSB9xsxVZWXoFq56PtkeAvT113kpu5nVw" // The user's fallback key
-];
+const HARDCODED_KEYS: string[] = [];
 
 export async function executeWithRotation(
   payload: any,
-  maxRetries = 12
+  maxRetries = 15
 ): Promise<any> {
   const keys = [
     ...(process.env.AI_KEYS ? process.env.AI_KEYS.split(',') : []),
@@ -24,7 +22,14 @@ export async function executeWithRotation(
   }
 
   // Multi-model rotation to bypass 503 high demand and 429 quota limits on specific node clusters
-  const fallbackModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite-preview-02-05', 'gemini-1.5-pro', 'gemini-3.1-flash-lite'];
+  const fallbackModels = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro',
+    'gemini-2.0-flash-lite-preview-02-05',
+    'gemini-3.1-flash-lite'
+  ];
   
   let lastError = null;
   
@@ -40,11 +45,6 @@ export async function executeWithRotation(
     } catch (err: any) {
       console.warn(`[LLM Proxy] Attempt ${attempt + 1}/${maxRetries} failed with model ${actualModel}. Error: ${err.message || '503 High Demand'}`);
       lastError = err;
-      
-      // If the error contains '400' (Bad Request), don't retry because the prompt is invalid
-      if (err.message && err.message.includes('400')) {
-        throw err;
-      }
       
       // Wait 1.5s before rotating key and model
       await new Promise(resolve => setTimeout(resolve, 1500));
