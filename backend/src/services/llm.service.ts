@@ -5,6 +5,8 @@ import { ContextMatrix, CapabilityVector } from '../engine/types';
 let currentKeyIndex = 0;
 let currentModelIndex = 0;
 const FALLBACK_MODELS = [
+  'gemini-3.0-flash',
+  'gemini-3.0-pro',
   'gemini-2.5-flash',
   'gemini-2.0-flash',
   'gemini-2.0-flash-lite',
