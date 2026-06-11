@@ -131,36 +131,17 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           text-transform: uppercase;
           color: #ffffff;
           opacity: 0;
-          transform: translateZ(0) translateY(25px) scale(1.1);
-          transition: opacity 1.4s cubic-bezier(0.16, 1, 0.3, 1), 
-                      transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+          transform: translateZ(0) scale(2.0); /* Start scaled up */
+          transition: opacity 1.2s ease-out, 
+                      transform 1.6s cubic-bezier(0.25, 1.25, 0.3, 1); /* Premium Rebound Curve */
           will-change: transform, opacity;
         }
         .lumensky-text.phase-2 {
           opacity: 1;
-          transform: translateZ(0) translateY(0) scale(1);
+          transform: translateZ(0) scale(1);
         }
 
-        .text-energy-blade {
-          position: absolute;
-          width: 150%;
-          height: 2px;
-          background: radial-gradient(ellipse at center, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 70%); /* GPU friendly flare */
-          opacity: 0;
-          top: 50%;
-          left: 50%;
-          transform: translateZ(0) translate(-50%, -50%) scaleX(0);
-          z-index: 0;
-          will-change: transform, opacity;
-        }
-        .text-energy-blade.phase-2 {
-          animation: bladeStrike 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes bladeStrike {
-          0% { transform: translateZ(0) translate(-50%, -50%) scaleX(0); opacity: 1; }
-          20% { transform: translateZ(0) translate(-50%, -50%) scaleX(1); opacity: 1; height: 1px; }
-          100% { transform: translateZ(0) translate(-50%, -50%) scaleX(0); opacity: 0; height: 0px; }
-        }
+
       `}</style>
 
       {/* Absolute Centering Wrapper to guarantee perfect alignment */}
@@ -180,12 +161,9 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           <div className="gyro-core"></div>
         </div>
 
-        {/* Lumensky Wordmark Container with Energy Blade */}
-        <div className="relative flex justify-center items-center">
-          <div className={`text-energy-blade ${phase >= 2 ? 'phase-2' : ''}`}></div>
-          <div 
-            className={`lumensky-text z-10 pl-[0.5em] ${phase >= 2 ? 'phase-2' : ''}`}
-          >
+        {/* Cinematic Reveal Text */}
+        <div className="lumensky-container mt-16 z-30">
+          <div className={`lumensky-text ${phase >= 2 ? 'phase-2' : ''}`}>
             Lumensky
           </div>
         </div>
