@@ -92,7 +92,11 @@ const messageSchema = z.object({
 // Primary chat/onboarding interaction message handler
 interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) => {
   const { user_id, message, conversationHistory, state_context, action, thread_id, model } = c.req.valid('json');
-  const actualUserId = c.get('userId') || user_id || 'test-user';
+  const actualUserId = c.get('userId');
+
+  if (!actualUserId) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
 
   try {
     let currentThreadId = thread_id;
@@ -544,15 +548,9 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
     });
 
   } catch (err: any) {
-    const rawMessage = getAIErrorMessage(err);
-
-    console.error('INTERACTION_ROUTE /message ERROR:', {
-      userId: actualUserId,
-      thread_id: thread_id,
-      error: rawMessage
-    });
-
     const safeText = toUserSafeAIText(err);
+
+    console.error('INTERACTION_MESSAGE_FATAL:', getAIErrorMessage(err));
 
     return c.json(
       {
@@ -571,7 +569,12 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
 
 // Endpoint to fetch current user's active locked mission
 interactionRoutes.get('/active-mission', async (c) => {
-  const userId = c.get('userId') || c.req.query('userId') || 'test-user';
+  const userId = c.get('userId');
+
+  if (!userId) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
   const mission = await DbService.getActiveMission(userId);
   if (!mission) {
     return c.json({ status: 'success', data: null });
@@ -657,7 +660,11 @@ interactionRoutes.post('/lock-trajectory', async (c) => {
       chatThreadId
     } = await c.req.json();
     
-    const actualUserId = c.get('userId') || userId || 'test-user';
+    const actualUserId = c.get('userId');
+
+    if (!actualUserId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
     
     const mission = {
       user_id: actualUserId,
@@ -725,7 +732,11 @@ Ensure the returned JSON perfectly adheres to the MarketIntelligenceReport inter
 interactionRoutes.post('/log-task', async (c) => {
   try {
     const { userId, outcome } = await c.req.json();
-    const actualUserId = c.get('userId') || userId || 'test-user';
+    const actualUserId = c.get('userId');
+
+    if (!actualUserId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
 
     const activeMission = await DbService.getActiveMission(actualUserId);
     if (!activeMission) {
@@ -764,36 +775,32 @@ interactionRoutes.post('/log-task', async (c) => {
 
     return c.json({ status: 'success', data: updatedMission });
   } catch (err: any) {
-    const rawMessage = getAIErrorMessage(err);
+    const safeText = toUserSafeAIText(err);
 
-    console.error('INTERACTION_ROUTE /log-task ERROR:', {
-      error: rawMessage
-    });
+    console.error('INTERACTION_ROUTE /log-task ERROR:', getAIErrorMessage(err));
 
     return c.json(
       {
-        status: 'error',
+        status: 'success',
         data: {
-          engine_result: {
-            type: 'system_error',
-            data: {
-              retryable: isRetryableAIError(rawMessage),
-              source: 'interaction.log-task'
-            }
-          },
+          engine_result: { type: 'chat_response', data: {} },
           ai_response: {
-            response_text: toUserSafeAIText(err)
+            response_text: safeText
           }
         }
       },
-      isRetryableAIError(rawMessage) ? 503 : 500
+      200
     );
   }
 });
 
 // Endpoint to fetch consistency log and AI strengths/bottlenecks for Reality Mirror
 interactionRoutes.get('/reality-mirror', async (c) => {
-  const userId = c.get('userId') || c.req.query('userId') || 'test-user';
+  const userId = c.get('userId');
+
+  if (!userId) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
   
   const activeMission = await DbService.getActiveMission(userId);
   if (!activeMission) {
@@ -882,7 +889,11 @@ Do not include markdown or backticks.`;
 
 // Endpoint to fetch and cache dynamic market reports
 interactionRoutes.get('/market-report', async (c) => {
-  const userId = c.get('userId') || c.req.query('userId') || 'test-user';
+  const userId = c.get('userId');
+
+  if (!userId) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
   
   let report = await DbService.getMarketReport(userId);
   
@@ -935,7 +946,12 @@ Ensure the returned JSON perfectly adheres to the MarketIntelligenceReport inter
 
 // Endpoint to fetch aggregated anonymous stats for Rival Index
 interactionRoutes.get('/rival-index', async (c) => {
-  const userId = c.get('userId') || c.req.query('userId') || 'test-user';
+  const userId = c.get('userId');
+
+  if (!userId) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
   const activeMission = await DbService.getActiveMission(userId);
   
   if (!activeMission) {
@@ -981,7 +997,12 @@ interactionRoutes.post('/architect', async (c) => {
 interactionRoutes.post('/operator/task', async (c) => {
   try {
     const { input: taskInput, matrix, capabilityVector, frictionProfile } = await c.req.json();
-    const actualUserId = c.get('userId') || taskInput.userId || 'test-user';
+    const actualUserId = c.get('userId');
+
+    if (!actualUserId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    
     taskInput.userId = actualUserId;
 
     const result = await processOperatorTaskUpdate(taskInput, matrix, capabilityVector, frictionProfile);
@@ -1020,7 +1041,13 @@ interactionRoutes.post('/operator/task', async (c) => {
 interactionRoutes.post('/operator/critique', async (c) => {
   try {
     const input = await c.req.json();
-    input.userId = c.get('userId') || input.userId || 'test-user';
+    const actualUserId = c.get('userId');
+
+    if (!actualUserId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    
+    input.userId = actualUserId;
 
     const result = processOperatorCritique(input);
     return c.json({ status: 'success', data: result });
