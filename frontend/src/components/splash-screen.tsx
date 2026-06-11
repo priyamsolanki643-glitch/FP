@@ -93,11 +93,9 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           height: 100%;
           border-radius: 50%;
           border: 1px solid rgba(255,255,255,0.06);
-          border-top: 1px solid rgba(255,255,255,0.8);
-          border-right: 1px solid rgba(255,255,255,0.3);
-          box-shadow: inset 0 0 10px rgba(255,255,255,0.02),
-                      -1px 0 3px rgba(255, 255, 255, 0.2), /* Subtle white blur */
-                      1px 0 3px rgba(255, 255, 255, 0.4);  /* Sharp white edge */
+          border-top: 1.5px solid rgba(255,255,255,0.9);
+          border-right: 1.5px solid rgba(255,255,255,0.4);
+          will-change: transform;
         }
         /* Exact timings from chat-view */
         .ring-1 { animation: spin1 1.8s linear infinite; }
@@ -126,21 +124,21 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         @keyframes shoot4 { 0% { transform: translateZ(0) translate(0,0) scale(1); opacity: 1; } 100% { transform: translateZ(0) translate(45px, 55px) scale(0); opacity: 0; } }
 
         @keyframes spin1 { 
-          0% { transform: rotateX(65deg) rotateY(0deg) rotateZ(0deg); }
-          100% { transform: rotateX(65deg) rotateY(0deg) rotateZ(360deg); } 
+          0% { transform: translateZ(0) rotateX(65deg) rotateY(0deg) rotateZ(0deg); }
+          100% { transform: translateZ(0) rotateX(65deg) rotateY(0deg) rotateZ(360deg); } 
         }
         @keyframes spin2 { 
-          0% { transform: rotateX(0deg) rotateY(65deg) rotateZ(0deg); }
-          100% { transform: rotateX(0deg) rotateY(65deg) rotateZ(360deg); } 
+          0% { transform: translateZ(0) rotateX(65deg) rotateY(60deg) rotateZ(0deg); }
+          100% { transform: translateZ(0) rotateX(65deg) rotateY(60deg) rotateZ(360deg); } 
         }
         @keyframes spin3 { 
-          0% { transform: rotateX(45deg) rotateY(45deg) rotateZ(0deg); }
-          100% { transform: rotateX(45deg) rotateY(45deg) rotateZ(360deg); } 
+          0% { transform: translateZ(0) rotateX(65deg) rotateY(-60deg) rotateZ(0deg); }
+          100% { transform: translateZ(0) rotateX(65deg) rotateY(-60deg) rotateZ(360deg); } 
         }
         
         @keyframes corePulse {
-          0% { transform: scale(0.5); opacity: 0.3; box-shadow: 0 0 2px rgba(255,255,255,0.1); }
-          100% { transform: scale(1.5); opacity: 1; box-shadow: 0 0 15px rgba(255,255,255,1); }
+          0% { transform: translateZ(0) scale(0.5); opacity: 0.3; }
+          100% { transform: translateZ(0) scale(1.5); opacity: 1; }
         }
 
         .lumensky-text {
