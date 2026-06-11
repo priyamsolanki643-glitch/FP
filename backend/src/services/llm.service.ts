@@ -2,30 +2,56 @@ import '../utils/env';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { ContextMatrix, CapabilityVector } from '../engine/types';
 
-function getAIClientForModel(modelName?: string): { client: GoogleGenAI, actualModel: string } {
-  const keys = process.env.AI_KEYS 
-    ? process.env.AI_KEYS.split(',').map(k => k.trim()).filter(Boolean)
-    : process.env.GEMINI_KEYS
-    ? process.env.GEMINI_KEYS.split(',').map(k => k.trim()).filter(Boolean)
-    : process.env.AI_PROVIDER_KEY 
-    ? [process.env.AI_PROVIDER_KEY]
-    : process.env.AI_STRATEGIST_PROVIDER_KEY
-    ? [process.env.AI_STRATEGIST_PROVIDER_KEY]
-    : process.env.GEMINI_API_KEY
-    ? [process.env.GEMINI_API_KEY]
-    : process.env.GOOGLE_API_KEY
-    ? [process.env.GOOGLE_API_KEY]
-    : [];
+const HARDCODED_KEYS = [
+  "AIzaSyCSB9xsxVZWXoFq56PtkeAvT113kpu5nVw" // The user's fallback key
+];
+
+export async function executeWithRotation(
+  payload: any,
+  maxRetries = 8
+): Promise<any> {
+  const keys = [
+    ...(process.env.AI_KEYS ? process.env.AI_KEYS.split(',') : []),
+    ...(process.env.GEMINI_KEYS ? process.env.GEMINI_KEYS.split(',') : []),
+    process.env.AI_PROVIDER_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.GOOGLE_API_KEY,
+    ...HARDCODED_KEYS
+  ].map(k => k?.trim()).filter(Boolean) as string[];
 
   if (keys.length === 0) {
     throw new Error('No AI API Keys configured');
   }
 
-  // Force single key and use latest eligible model
-  const key = keys[0];
-  const actualModel = 'gemini-2.5-flash';
+  // Multi-model rotation to bypass 503 high demand on specific node clusters
+  const fallbackModels = ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite-preview-02-05'];
   
-  return { client: new GoogleGenAI({ apiKey: key }), actualModel };
+  let lastError = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const key = keys[attempt % keys.length];
+    const actualModel = fallbackModels[attempt % fallbackModels.length];
+    const client = new GoogleGenAI({ apiKey: key });
+    
+    try {
+      // Force inject the current rotating model into the payload
+      const attemptPayload = { ...payload, model: actualModel };
+      return await client.models.generateContent(attemptPayload as any);
+    } catch (err: any) {
+      console.warn(`[LLM Proxy] Attempt ${attempt + 1}/${maxRetries} failed with model ${actualModel}. Error: ${err.message || '503 High Demand'}`);
+      lastError = err;
+      
+      // If the error contains '400' (Bad Request), don't retry because the prompt is invalid
+      if (err.message && err.message.includes('400')) {
+        throw err;
+      }
+      
+      // Wait 1.5s before rotating key and model
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+  }
+  
+  throw lastError;
 }
 
 function cleanAndParseJSON(text: string): any {
@@ -118,10 +144,7 @@ export class LLMService {
         ...conversationHistory
       ];
 
-      const { client, actualModel } = getAIClientForModel(modelName);
-      
-      const response = await client.models.generateContent({
-        model: actualModel,
+      const response = await executeWithRotation({
         contents: fullContents as any,
         config: {
           temperature: 0.3,
@@ -160,15 +183,12 @@ export class LLMService {
         required: ['response_text']
       };
 
-      const { client, actualModel } = getAIClientForModel('FP Pro'); // Use pro for backend logic by default
-      
       const fullContents = [
         { role: 'user', parts: [{ text: systemPrompt + "\n\nCRITICAL: Maintain the Axis AI persona as defined in the system prompt." }] },
         ...conversationHistory
       ];
 
-      const response = await client.models.generateContent({
-        model: actualModel,
+      const response = await executeWithRotation({
         contents: fullContents as any,
         config: {
           responseMimeType: 'application/json',
@@ -205,10 +225,7 @@ export class LLMService {
         required: ['marketSummary', 'localOpportunities', 'competitorLandscape', 'recommendedAction', 'confidenceScore']
       };
 
-      const { client, actualModel } = getAIClientForModel('FP Elite'); // High reasoning for reports
-      
-      const response = await client.models.generateContent({
-        model: actualModel,
+      const response = await executeWithRotation({
         contents: [{ role: 'user', parts: [{ text: researchMandate + "\n\nIMPORTANT: You must return the report in JSON format matching the schema: { marketSummary: string, localOpportunities: string[], competitorLandscape: string[], recommendedAction: string, confidenceScore: number }. Output ONLY valid JSON." }] }] as any,
         config: {
           temperature: 0.2,
