@@ -7,7 +7,6 @@ import { Sidebar } from "@/components/sidebar";
 import { ChatView } from "@/components/chat-view";
 import { VaultModal } from "@/components/vault-modal";
 import { SplashScreen } from "@/components/splash-screen";
-import { OnboardingScreen } from "@/components/onboarding";
 import { Archive } from "lucide-react";
 
 export default function EntryPoint() {
@@ -17,7 +16,6 @@ export default function EntryPoint() {
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const doubleTapRef = useRef(0);
 
   useEffect(() => {
@@ -156,11 +154,7 @@ export default function EntryPoint() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
-  if (!showSplash && !hasCompletedOnboarding) {
-    return <OnboardingScreen onComplete={() => setHasCompletedOnboarding(true)} />;
-  }
-
-  if (!showSplash && hasCompletedOnboarding && !isLocked) {
+  if (!showSplash && !isLocked) {
     return <LandingPage onLock={verifyAndLock} hasSession={hasSession} />;
   }
 

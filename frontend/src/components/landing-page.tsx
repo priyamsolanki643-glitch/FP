@@ -14,9 +14,11 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
   const [visible, setVisible] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("signup");
+  const [isHovered, setIsHovered] = useState(false); // For Domain Expansion Aura
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 60);
+    // Sharp entry timing
+    const t = setTimeout(() => setVisible(true), 100);
     return () => clearTimeout(t);
   }, []);
 
@@ -24,7 +26,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
     if (hasSession) {
       if (!isExiting) {
         setIsExiting(true);
-        setTimeout(onLock, 500);
+        setTimeout(onLock, 600);
       }
     } else {
       setAuthMode("signup");
@@ -36,190 +38,252 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
     setIsAuthOpen(false);
     if (!isExiting) {
       setIsExiting(true);
-      setTimeout(onLock, 500);
+      setTimeout(onLock, 600);
     }
   };
 
   return (
-    <div className="lp-root relative min-h-screen bg-black text-white flex flex-col justify-between overflow-hidden select-none font-sans">
+    <div className={`lp-root relative min-h-screen bg-black text-white flex flex-col justify-between overflow-hidden select-none font-sans transition-colors duration-700 ${isHovered ? 'bg-[#050505]' : 'bg-black'}`}>
 
       {/* Standard React CSS Injector */}
       <style>{`
         .lp-root {
-          background-color: #000000 !important;
+          /* Force pure black void */
           background-image: none !important;
         }
 
-        .monolith-glow {
+        /* The Deep Aura (Domain Expansion) - Expands when CTA is hovered */
+        .domain-aura {
           position: absolute;
-          top: -20vh;
+          top: 50%;
           left: 50%;
-          transform: translateX(-50%);
-          width: 80vw;
-          height: 80vw;
-          max-width: 1000px;
-          max-height: 1000px;
-          background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 70%);
+          transform: translate(-50%, -50%);
+          width: 0vw;
+          height: 0vw;
+          background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%);
           border-radius: 50%;
           pointer-events: none;
+          transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1), height 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s ease;
+          opacity: 0;
+          z-index: 0;
+        }
+        .domain-aura.active {
+          width: 150vw;
+          height: 150vw;
+          opacity: 1;
         }
 
-        /* The Mechanical Sweep Reveal for "Start executing." */
-        .reveal-mask {
+        /* Katana Slicing Text Effect */
+        .katana-container {
           position: relative;
           display: inline-block;
-          overflow: hidden;
+          overflow: hidden; /* Hide text before slice */
         }
-        .reveal-mask::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          right: 0;
-          width: 100%;
-          height: 100%;
-          background: #000000;
-          animation: maskReveal 1.2s cubic-bezier(0.8, 0, 0.2, 1) forwards;
-          animation-delay: 0.6s;
-          border-left: 2px solid #ffffff; /* Optical cutting blade */
-        }
-        @keyframes maskReveal {
-          0% { width: 100%; opacity: 1; }
-          99% { width: 0%; opacity: 1; }
-          100% { width: 0%; opacity: 0; border-left: none; }
+        
+        .katana-text {
+          display: inline-block;
+          opacity: 0;
+          transform: translateX(-20px);
+          animation: katanaSnap 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation-delay: 0.8s;
         }
 
-        /* Psychological Dominance CTA: Monolithic White Block */
-        .btn-lumensky-core {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px 42px;
-          border-radius: 0px; /* Sharp Machine Aesthetic */
+        .katana-blade {
+          position: absolute;
+          top: 0;
+          left: -10px;
+          width: 4px;
+          height: 100%;
           background: #ffffff;
-          color: #000000;
-          font-family: 'Inter', sans-serif;
-          font-weight: 600;
-          font-size: 14px;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          cursor: pointer;
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s ease;
-          overflow: hidden;
+          box-shadow: 0 0 20px #ffffff, 0 0 40px #ffffff;
+          opacity: 0;
+          transform: skewX(-15deg);
+          animation: katanaCut 1.2s cubic-bezier(0.8, 0, 0.2, 1) forwards;
+          animation-delay: 0.5s;
           z-index: 10;
         }
 
-        .btn-lumensky-core:hover {
-          transform: translateY(-2px) scale(1.02);
-          background: #e0e0e0;
+        @keyframes katanaCut {
+          0% { left: -10%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { left: 110%; opacity: 1; }
+          100% { left: 120%; opacity: 0; }
         }
 
-        .btn-lumensky-core:active {
-          transform: translateY(1px) scale(0.98);
+        @keyframes katanaSnap {
+          0% { opacity: 0; transform: translateX(-10px); }
+          100% { opacity: 1; transform: translateX(0); }
         }
 
-        .btn-lumensky-core .arrow-icon {
-          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        /* Glitch Typewriter Subtext */
+        .glitch-subtext {
+          opacity: 0;
+          transform: translateY(10px);
+          animation: glitchIn 0.8s ease-out forwards;
+          animation-delay: 1.4s;
         }
-        .btn-lumensky-core:hover .arrow-icon {
-          transform: translateX(4px);
+        @keyframes glitchIn {
+          0% { opacity: 0; transform: translateY(10px); filter: blur(5px); }
+          100% { opacity: 1; transform: translateY(0); filter: blur(0px); }
         }
 
-        .btn-signin-lumensky {
+        /* Monolithic CTA Button - Pure Brutalism */
+        .btn-monolith {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          gap: 16px;
+          padding: 20px 56px;
+          background: #ffffff;
+          color: #000000;
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
+          font-size: 15px;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          cursor: pointer;
+          border: none;
+          outline: none;
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s ease, color 0.4s ease;
+          z-index: 10;
+          opacity: 0;
+          transform: translateY(20px);
+          animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation-delay: 1.8s;
+        }
+        
+        .btn-monolith::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border: 1px solid rgba(255,255,255,0);
+          transition: inset 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease;
+        }
+
+        .btn-monolith:hover {
+          background: #000000;
+          color: #ffffff;
+          transform: scale(1.02);
+        }
+
+        .btn-monolith:hover::after {
+          inset: -6px;
+          border-color: rgba(255,255,255,0.4);
+        }
+
+        .btn-monolith:active {
+          transform: scale(0.98);
+        }
+
+        .btn-monolith .arrow-icon {
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-monolith:hover .arrow-icon {
+          transform: translateX(8px);
+        }
+
+        @keyframes fadeInUp {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header Auth Buttons - Invisible until needed */
+        .btn-auth-stealth {
           background: transparent;
           border: none;
           cursor: pointer;
-          font-size: 12px;
+          font-size: 11px;
           text-transform: uppercase;
-          letter-spacing: 0.1em;
+          letter-spacing: 0.2em;
           padding: 8px 16px;
-          color: rgba(255, 255, 255, 0.6);
+          color: rgba(255, 255, 255, 0.3);
           font-weight: 500;
           transition: color 0.3s ease;
         }
-        .btn-signin-lumensky:hover {
+        .btn-auth-stealth:hover {
           color: #ffffff;
         }
-
-        .btn-login-lumensky {
-          background: #ffffff;
-          border: none;
-          border-radius: 0px;
-          cursor: pointer;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          padding: 8px 24px;
-          color: #000000;
-          font-weight: 600;
-          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        
+        .btn-auth-login {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: #ffffff;
         }
-        .btn-login-lumensky:hover {
-          transform: translateY(-1px);
-          background: #e0e0e0;
+        .btn-auth-login:hover {
+          background: #ffffff;
+          color: #000000;
         }
       `}</style>
 
+      {/* The Expanding Aura Background */}
+      <div className={`domain-aura ${isHovered ? 'active' : ''}`}></div>
+
       {/* ── Header ── */}
       <header 
-        className="flex items-center justify-end px-6 py-5 md:px-12 relative z-10 w-full"
+        className="flex items-center justify-end px-6 py-8 md:px-12 relative z-10 w-full"
         style={{
-          transition: "transform 500ms cubic-bezier(0.16, 1, 0.3, 1), opacity 500ms cubic-bezier(0.16, 1, 0.3, 1)",
-          opacity: isExiting ? 0 : (visible ? 1 : 0),
-          transform: isExiting ? "translate3d(0, -20px, 0) scale(0.95)" : (visible ? "translate3d(0, 0, 0) scale(1)" : "translate3d(0, -10px, 0) scale(0.98)"),
-          willChange: "transform, opacity",
+          transition: "opacity 1s ease",
+          opacity: visible && !isExiting ? 1 : 0,
         }}
       >
-        <div className="flex items-center gap-3">
-          <button onClick={() => { setAuthMode("signup"); setIsAuthOpen(true); }} className="btn-signin-lumensky">Sign in</button>
-          <button onClick={() => { setAuthMode("login"); setIsAuthOpen(true); }} className="btn-login-lumensky">Log in</button>
+        <div className="flex items-center gap-4">
+          <button onClick={() => { setAuthMode("signup"); setIsAuthOpen(true); }} className="btn-auth-stealth">Sign in</button>
+          <button onClick={() => { setAuthMode("login"); setIsAuthOpen(true); }} className="btn-auth-stealth btn-auth-login">Log in</button>
         </div>
       </header>
 
       {/* ── Hero Main Content ── */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 max-w-4xl mx-auto w-full pointer-events-none">
-        <div className="monolith-glow"></div>
+      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center relative z-10 max-w-5xl mx-auto w-full pointer-events-none">
         <div 
           className="flex flex-col items-center w-full relative pointer-events-auto"
           style={{
-            transition: "transform 600ms cubic-bezier(0.16, 1, 0.3, 1), opacity 600ms cubic-bezier(0.16, 1, 0.3, 1)",
+            transition: "transform 800ms cubic-bezier(0.16, 1, 0.3, 1), opacity 800ms cubic-bezier(0.16, 1, 0.3, 1)",
             opacity: isExiting ? 0 : (visible ? 1 : 0),
-            transform: isExiting ? "scale(0.85) translate3d(0, -60px, 0)" : (visible ? "scale(1) translate3d(0, 0, 0)" : "scale(0.95) translate3d(0, 20px, 0)"),
+            transform: isExiting ? "scale(0.9) translateZ(0)" : (visible ? "scale(1) translateZ(0)" : "scale(0.95) translateZ(0)"),
             willChange: "transform, opacity",
           }}
         >
           {/* Headline */}
-          <h1 className="text-white font-medium font-display mb-6 flex flex-col items-center">
-            {/* First Line - Stop planning. */}
+          <h1 className="text-white font-medium font-display mb-8 flex flex-col items-center">
+            {/* Line 1: Silent Arrival */}
             <div 
-              className="tracking-tighter pb-1 text-white/95 leading-[1.1] whitespace-nowrap"
-              style={{ fontSize: "clamp(1.8rem, 9.5vw, 5.0rem)", fontWeight: 300 }}
+              className="tracking-tighter pb-1 text-white/60 leading-[1.1] whitespace-nowrap"
+              style={{ 
+                fontSize: "clamp(1.5rem, 8vw, 4.0rem)", 
+                fontWeight: 200,
+                opacity: visible ? 1 : 0,
+                transition: "opacity 1s ease 0.2s"
+              }}
             >
               Stop planning.
             </div>
             
-            {/* Second Line - Start executing. */}
-            <div className="reveal-mask">
+            {/* Line 2: The Katana Reveal */}
+            <div className="katana-container mt-1">
+              <div className="katana-blade"></div>
               <div 
-                className="tracking-tighter pb-2 md:pb-4 leading-[1.15] whitespace-nowrap text-white"
-                style={{ fontSize: "clamp(2.5rem, 12vw, 6.8rem)", fontWeight: 700, marginTop: "-0.05em" }}
+                className="katana-text tracking-tighter pb-2 leading-[1.0] whitespace-nowrap text-white"
+                style={{ fontSize: "clamp(2.5rem, 13vw, 7.5rem)", fontWeight: 800 }}
               >
                 Start executing.
               </div>
             </div>
           </h1>
 
-          {/* Subtext */}
-          <p className="text-[#a1a1aa] text-[13px] sm:text-[15px] md:text-[17px] leading-relaxed max-w-xl mx-auto mb-12 px-2 font-sans font-light tracking-wide">
-            A strategist and executioner that converts your ambition into
-            raw, immutable daily action. No fluff. No excuses. No mercy.
+          {/* Brutalist Subtext */}
+          <p className="glitch-subtext text-[#888888] text-[13px] sm:text-[15px] md:text-[16px] leading-relaxed max-w-xl mx-auto mb-16 px-2 font-sans font-light tracking-[0.05em] uppercase">
+            A strategist and executioner that converts your ambition into raw, immutable daily action. No fluff. No excuses. No mercy.
           </p>
 
-          {/* Centered CTA Row */}
-          <div className="flex justify-center w-full mt-2">
-            <button onClick={handleStart} className="btn-lumensky-core group">
-              <span>Get started</span>
-              <ArrowRight size={18} className="arrow-icon opacity-80 group-hover:opacity-100" />
+          {/* The Monolith CTA */}
+          <div 
+            className="flex justify-center w-full mt-4"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <button onClick={handleStart} className="btn-monolith group">
+              <span>Enter Domain</span>
+              <ArrowRight size={20} className="arrow-icon" />
             </button>
           </div>
         </div>
