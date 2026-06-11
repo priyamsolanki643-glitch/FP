@@ -3,56 +3,88 @@ import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Supabase credentials MUST be provided via environment variables only — never hardcoded.
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('CRITICAL: SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables are required.');
-  // Allow app to continue but Supabase calls will fail gracefully
 }
 
-// Determine if we should use local JSON fallback
 const isLocalFallback = !supabaseUrl || !supabaseKey;
 
 let supabase: any = null;
 const fallbackFilePath = path.join(process.cwd(), 'database.json');
 
+type LocalDbShape = {
+  missions: any[];
+  consistency_log: any[];
+  market_reports: any[];
+  chat_threads: any[];
+  messages: any[];
+  user_memories: any[];
+  linguistic_signals: any[];
+  weekly_risk_reports: any[];
+};
+
+function getEmptyLocalDb(): LocalDbShape {
+  return {
+    missions: [],
+    consistency_log: [],
+    market_reports: [],
+    chat_threads: [],
+    messages: [],
+    user_memories: [],
+    linguistic_signals: [],
+    weekly_risk_reports: []
+  };
+}
+
 try {
-  // Initialize database
   if (!isLocalFallback) {
     console.log('DB_SERVICE: Connecting to Supabase at', supabaseUrl);
-    supabase = createClient(supabaseUrl, supabaseKey);
+    supabase = createClient(supabaseUrl!, supabaseKey!);
   } else {
     console.log('DB_SERVICE: Running in Local Fallback mode using database.json');
     if (!fs.existsSync(fallbackFilePath)) {
-      fs.writeFileSync(
-        fallbackFilePath,
-        JSON.stringify({ missions: [], consistency_log: [], market_reports: [] }, null, 2)
-      );
+      fs.writeFileSync(fallbackFilePath, JSON.stringify(getEmptyLocalDb(), null, 2));
     }
   }
 } catch (initError) {
-  console.error("CRITICAL ERROR IN DB_SERVICE INIT:", initError);
+  console.error('CRITICAL ERROR IN DB_SERVICE INIT:', initError);
 }
 
-// Local Database Helpers
-function readLocalDb(): { missions: any[]; consistency_log: any[]; market_reports: any[] } {
+function readLocalDb(): LocalDbShape {
   try {
+    if (!fs.existsSync(fallbackFilePath)) {
+      return getEmptyLocalDb();
+    }
+
     const raw = fs.readFileSync(fallbackFilePath, 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+
+    return {
+      missions: Array.isArray(parsed.missions) ? parsed.missions : [],
+      consistency_log: Array.isArray(parsed.consistency_log) ? parsed.consistency_log : [],
+      market_reports: Array.isArray(parsed.market_reports) ? parsed.market_reports : [],
+      chat_threads: Array.isArray(parsed.chat_threads) ? parsed.chat_threads : [],
+      messages: Array.isArray(parsed.messages) ? parsed.messages : [],
+      user_memories: Array.isArray(parsed.user_memories) ? parsed.user_memories : [],
+      linguistic_signals: Array.isArray(parsed.linguistic_signals) ? parsed.linguistic_signals : [],
+      weekly_risk_reports: Array.isArray(parsed.weekly_risk_reports) ? parsed.weekly_risk_reports : []
+    };
   } catch (e) {
-    return { missions: [], consistency_log: [], market_reports: [] };
+    console.error('DB_SERVICE: Failed to read local DB:', e);
+    return getEmptyLocalDb();
   }
 }
 
-function writeLocalDb(data: any) {
+function writeLocalDb(data: LocalDbShape) {
   fs.writeFileSync(fallbackFilePath, JSON.stringify(data, null, 2));
 }
 
-// Smart goal categorization
 function getGoalCategory(missionName: string): string {
-  const name = missionName.toLowerCase();
+  const name = (missionName || '').toLowerCase();
+
   if (name.includes('jee') || name.includes('exam') || name.includes('study') || name.includes('chapter')) {
     return 'Academics & Exams';
   }
@@ -65,17 +97,24 @@ function getGoalCategory(missionName: string): string {
   if (name.includes('freelance') || name.includes('write') || name.includes('design') || name.includes('copy')) {
     return 'Freelancing & Design';
   }
+
   return 'General Operator Trajectory';
 }
 
 export class DbService {
-  /**
-   * Initializes database and seeds rival operator records if empty.
-   */
   static async init() {
     try {
+      if (isLocalFallback && !fs.existsSync(fallbackFilePath)) {
+        writeLocalDb(getEmptyLocalDb());
+      }
+
+      const shouldSeed =
+        process.env.SEED_RIVAL_OPERATORS === 'true' ||
+        process.env.NODE_ENV === 'development';
+
       const currentCount = await this.getMissionsCount();
-      if (currentCount < 20) {
+
+      if (currentCount < 20 && shouldSeed) {
         console.log('DB_SERVICE: Database has few records. Seeding anonymous operator data for Rival Index...');
         await this.seedRivalOperators();
       }
@@ -88,9 +127,11 @@ export class DbService {
     if (isLocalFallback) {
       return readLocalDb().missions.length;
     }
+
     const { count, error } = await supabase
       .from('missions')
       .select('*', { count: 'exact', head: true });
+
     if (error) throw error;
     return count || 0;
   }
@@ -103,18 +144,17 @@ export class DbService {
       'Freelancing & Design',
       'General Operator Trajectory'
     ];
-    
+
     const seededMissions: any[] = [];
     const seededLogs: any[] = [];
 
-    // Seed ~150 simulated users
     for (let i = 1; i <= 150; i++) {
       const category = categories[Math.floor(Math.random() * categories.length)];
-      const dayNumber = Math.floor(Math.random() * 85) + 1; // Days 1 to 85
+      const dayNumber = Math.floor(Math.random() * 85) + 1;
       const totalDays = dayNumber > 45 ? 90 : 45;
-      const consistencyScore = Math.floor(Math.random() * 55) + 43; // Score between 43% and 98%
+      const consistencyScore = Math.floor(Math.random() * 55) + 43;
       const streakDays = consistencyScore > 75 ? Math.floor(Math.random() * 12) + 2 : 0;
-      
+
       const mission = {
         id: `00000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
         user_id: `rival-operator-${i}`,
@@ -134,12 +174,11 @@ export class DbService {
 
       seededMissions.push(mission);
 
-      // Seed 5 historical logs for each to populate graph
       for (let d = 0; d < 5; d++) {
         const logDate = new Date();
         logDate.setDate(logDate.getDate() - d);
         const dateStr = logDate.toISOString().split('T')[0];
-        
+
         seededLogs.push({
           id: `00000000-0000-0000-0000-${String(i).padStart(6, '0')}${String(d).padStart(6, '0')}`,
           user_id: `rival-operator-${i}`,
@@ -152,63 +191,69 @@ export class DbService {
 
     if (isLocalFallback) {
       const data = readLocalDb();
-      data.missions = [...data.missions, ...seededMissions];
-      data.consistency_log = [...data.consistency_log, ...seededLogs];
+
+      const existingMissionIds = new Set(data.missions.map((m) => m.id));
+      const existingLogIds = new Set(data.consistency_log.map((l) => l.id));
+
+      data.missions.push(...seededMissions.filter((m) => !existingMissionIds.has(m.id)));
+      data.consistency_log.push(...seededLogs.filter((l) => !existingLogIds.has(l.id)));
+
       writeLocalDb(data);
       console.log(`DB_SERVICE: Local file seeded successfully with ${seededMissions.length} profiles.`);
-    } else {
-      // Supabase upload in chunks
-      const chunkSize = 50;
-      for (let i = 0; i < seededMissions.length; i += chunkSize) {
-        const mChunk = seededMissions.slice(i, i + chunkSize);
-        const { error: mErr } = await supabase.from('missions').upsert(mChunk);
-        if (mErr) console.error('Seeding chunk missions error:', mErr);
-      }
-      
-      for (let i = 0; i < seededLogs.length; i += chunkSize) {
-        const lChunk = seededLogs.slice(i, i + chunkSize);
-        const { error: lErr } = await supabase.from('consistency_log').upsert(lChunk);
-        if (lErr) console.error('Seeding chunk logs error:', lErr);
-      }
-      console.log('DB_SERVICE: Supabase seeded successfully.');
+      return;
     }
+
+    const chunkSize = 50;
+
+    for (let i = 0; i < seededMissions.length; i += chunkSize) {
+      const mChunk = seededMissions.slice(i, i + chunkSize);
+      const { error: mErr } = await supabase.from('missions').upsert(mChunk);
+      if (mErr) console.error('Seeding chunk missions error:', mErr);
+    }
+
+    for (let i = 0; i < seededLogs.length; i += chunkSize) {
+      const lChunk = seededLogs.slice(i, i + chunkSize);
+      const { error: lErr } = await supabase.from('consistency_log').upsert(lChunk);
+      if (lErr) console.error('Seeding chunk logs error:', lErr);
+    }
+
+    console.log('DB_SERVICE: Supabase seeded successfully.');
   }
 
-  // MISSIONS OPERATIONS
   static async getActiveMission(userId: string): Promise<any | null> {
     if (isLocalFallback) {
       const data = readLocalDb();
-      const mission = data.missions.find(m => m.user_id === userId);
-      return mission || null;
+      return data.missions.find((m) => m.user_id === userId) || null;
     }
+
     const { data, error } = await supabase
       .from('missions')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
+
     if (error) {
       console.error('getActiveMission db error:', error);
       return null;
     }
+
     return data;
   }
 
   static async saveMission(mission: any): Promise<any> {
     if (isLocalFallback) {
       const data = readLocalDb();
-      const idx = data.missions.findIndex(m => m.user_id === mission.user_id);
-      
+      const idx = data.missions.findIndex((m) => m.user_id === mission.user_id);
+
       const newMission = {
         id: mission.id || `user-mission-${Date.now()}`,
         ...mission,
         createdAt: mission.createdAt || new Date().toISOString()
       };
 
-      if (idx >= 0) {
-        data.missions[idx] = newMission;
-      } else {
-        data.missions.push(newMission);
-      }
+      if (idx >= 0) data.missions[idx] = newMission;
+      else data.missions.push(newMission);
+
       writeLocalDb(data);
       return newMission;
     }
@@ -226,45 +271,47 @@ export class DbService {
     return data;
   }
 
-  // CONSISTENCY LOG OPERATIONS
   static async getConsistencyHistory(userId: string): Promise<any[]> {
     if (isLocalFallback) {
       const data = readLocalDb();
       return data.consistency_log
-        .filter(l => l.user_id === userId)
+        .filter((l) => l.user_id === userId)
         .sort((a, b) => a.logged_date.localeCompare(b.logged_date));
     }
+
     const { data, error } = await supabase
       .from('consistency_log')
       .select('*')
       .eq('user_id', userId)
       .order('logged_date', { ascending: true });
+
     if (error) throw error;
     return data || [];
   }
 
   static async addConsistencyLog(userId: string, score: number, customDateStr?: string): Promise<void> {
     const dateStr = customDateStr || new Date().toISOString().split('T')[0];
-    
+
     if (isLocalFallback) {
       const data = readLocalDb();
       const idx = data.consistency_log.findIndex(
-        l => l.user_id === userId && l.logged_date === dateStr
+        (l) => l.user_id === userId && l.logged_date === dateStr
       );
 
       const logEntry = {
-        id: idx >= 0 ? data.consistency_log[idx].id : `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        id:
+          idx >= 0
+            ? data.consistency_log[idx].id
+            : `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         user_id: userId,
         score,
         logged_date: dateStr,
         created_at: new Date().toISOString()
       };
 
-      if (idx >= 0) {
-        data.consistency_log[idx] = logEntry;
-      } else {
-        data.consistency_log.push(logEntry);
-      }
+      if (idx >= 0) data.consistency_log[idx] = logEntry;
+      else data.consistency_log.push(logEntry);
+
       writeLocalDb(data);
       return;
     }
@@ -277,18 +324,18 @@ export class DbService {
         logged_date: dateStr,
         created_at: new Date().toISOString()
       });
+
     if (error) throw error;
   }
 
-  // MARKET REPORT OPERATIONS
   static async getMarketReport(userId: string): Promise<any | null> {
     if (isLocalFallback) {
       const data = readLocalDb();
-      // Get the latest market report
-      const reports = data.market_reports.filter(r => r.user_id === userId);
+      const reports = data.market_reports.filter((r) => r.user_id === userId);
       if (reports.length === 0) return null;
       return reports.sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
     }
+
     const { data, error } = await supabase
       .from('market_reports')
       .select('*')
@@ -296,10 +343,12 @@ export class DbService {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+
     if (error) {
       console.error('getMarketReport db error:', error);
       return null;
     }
+
     return data;
   }
 
@@ -312,10 +361,7 @@ export class DbService {
 
     if (isLocalFallback) {
       const data = readLocalDb();
-      const newReport = {
-        id: `report-${Date.now()}`,
-        ...payload
-      };
+      const newReport = { id: `report-${Date.now()}`, ...payload };
       data.market_reports.push(newReport);
       writeLocalDb(data);
       return newReport;
@@ -331,41 +377,39 @@ export class DbService {
     return data;
   }
 
-  // RIVAL INDEX AGGREGATION
-  static async getRivalIndexStats(userId: string, missionName: string): Promise<{ totalUsers: number; milestonePassedUsers: number }> {
+  static async getRivalIndexStats(
+    userId: string,
+    missionName: string
+  ): Promise<{ totalUsers: number; milestonePassedUsers: number }> {
     const category = getGoalCategory(missionName);
 
     if (isLocalFallback) {
       const data = readLocalDb();
-      // Filter missions matching this category
-      const matches = data.missions.filter(m => getGoalCategory(m.missionName) === category);
-      
+      const matches = data.missions.filter((m) => getGoalCategory(m.missionName) === category);
+
       return {
         totalUsers: matches.length,
-        milestonePassedUsers: matches.filter(m => m.dayNumber > 30).length
+        milestonePassedUsers: matches.filter((m) => m.dayNumber > 30).length
       };
     }
 
-    // Since in Supabase we categorize dynamically, we can load all and calculate or search similar
-    // To make it highly scalable and simple, we load missions and do aggregate filter.
     const { data, error } = await supabase
       .from('missions')
       .select('missionName, dayNumber');
 
     if (error) {
       console.error('getRivalIndexStats DB Error:', error);
-      return { totalUsers: 847, milestonePassedUsers: 23 }; // Safe fallback matching UI standard
+      return { totalUsers: 847, milestonePassedUsers: 23 };
     }
 
     const matches = (data || []).filter((m: any) => getGoalCategory(m.missionName) === category);
-    
+
     return {
       totalUsers: matches.length,
       milestonePassedUsers: matches.filter((m: any) => m.dayNumber > 30).length
     };
   }
 
-  // CHAT THREADS AND MESSAGES OPERATIONS
   static async createChatThread(userId: string, title: string): Promise<any> {
     const payload = {
       user_id: userId,
@@ -375,7 +419,11 @@ export class DbService {
     };
 
     if (isLocalFallback) {
-      return { id: `thread-${Date.now()}`, ...payload };
+      const data = readLocalDb();
+      const thread = { id: `thread-${Date.now()}`, ...payload };
+      data.chat_threads.push(thread);
+      writeLocalDb(data);
+      return thread;
     }
 
     const { data, error } = await supabase
@@ -389,8 +437,13 @@ export class DbService {
   }
 
   static async getChatThreads(userId: string): Promise<any[]> {
-    if (isLocalFallback) return [];
-    
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      return data.chat_threads
+        .filter((t) => t.user_id === userId)
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+    }
+
     const { data, error } = await supabase
       .from('chat_threads')
       .select('*')
@@ -401,13 +454,21 @@ export class DbService {
       console.error('getChatThreads DB error:', error);
       return [];
     }
+
     return data || [];
   }
 
   static async deleteChatThread(threadId: string, userId: string): Promise<boolean> {
-    if (isLocalFallback) return false;
-    
-    // Explicitly delete all associated messages first to bypass foreign key constraints
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      data.messages = data.messages.filter((m) => m.thread_id !== threadId);
+      data.chat_threads = data.chat_threads.filter(
+        (t) => !(t.id === threadId && t.user_id === userId)
+      );
+      writeLocalDb(data);
+      return true;
+    }
+
     const { error: msgError } = await supabase
       .from('messages')
       .delete()
@@ -427,6 +488,7 @@ export class DbService {
       console.error('deleteChatThread DB error:', error);
       return false;
     }
+
     return true;
   }
 
@@ -439,7 +501,19 @@ export class DbService {
       created_at: new Date().toISOString()
     };
 
-    if (isLocalFallback) return { id: `msg-${Date.now()}`, ...payload };
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      const message = { id: `msg-${Date.now()}`, ...payload };
+      data.messages.push(message);
+
+      const thread = data.chat_threads.find((t) => t.id === threadId);
+      if (thread) {
+        thread.updated_at = new Date().toISOString();
+      }
+
+      writeLocalDb(data);
+      return message;
+    }
 
     const { data, error } = await supabase
       .from('messages')
@@ -452,14 +526,21 @@ export class DbService {
       return null;
     }
 
-    // Update thread timestamp
-    await supabase.from('chat_threads').update({ updated_at: new Date().toISOString() }).eq('id', threadId);
+    await supabase
+      .from('chat_threads')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', threadId);
 
     return data;
   }
 
   static async getMessages(threadId: string): Promise<any[]> {
-    if (isLocalFallback) return [];
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      return data.messages
+        .filter((m) => m.thread_id === threadId)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    }
 
     const { data, error } = await supabase
       .from('messages')
@@ -471,20 +552,39 @@ export class DbService {
       console.error('getMessages DB error:', error);
       return [];
     }
+
     return data || [];
   }
 
-  // DEEP ANALYTICS: LINGUISTIC SIGNALS
   static async saveLinguisticSignal(payload: any): Promise<void> {
-    if (isLocalFallback) return;
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      data.linguistic_signals.push({
+        id: `ling-${Date.now()}`,
+        ...payload,
+        timestamp: new Date().toISOString()
+      });
+      writeLocalDb(data);
+      return;
+    }
+
     const { error } = await supabase
       .from('linguistic_signals')
       .insert({ ...payload, timestamp: new Date().toISOString() });
+
     if (error) console.error('saveLinguisticSignal DB error:', error);
   }
 
   static async getLastLinguisticSignal(userId: string): Promise<any> {
-    if (isLocalFallback) return null;
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      const signals = data.linguistic_signals
+        .filter((s) => s.user_id === userId)
+        .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+      return signals[0] || null;
+    }
+
     const { data, error } = await supabase
       .from('linguistic_signals')
       .select('*')
@@ -492,35 +592,58 @@ export class DbService {
       .order('timestamp', { ascending: false })
       .limit(1)
       .maybeSingle();
+
     if (error) {
       console.error('getLastLinguisticSignal DB error:', error);
       return null;
     }
+
     return data;
   }
 
   static async getLinguisticSignalsLast7Days(userId: string): Promise<any[]> {
-    if (isLocalFallback) return [];
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+      return data.linguistic_signals
+        .filter((s) => s.user_id === userId && new Date(s.timestamp).getTime() >= sevenDaysAgo)
+        .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    }
+
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await supabase
       .from('linguistic_signals')
       .select('*')
       .eq('user_id', userId)
       .gte('timestamp', sevenDaysAgo)
       .order('timestamp', { ascending: true });
+
     if (error) {
       console.error('getLinguisticSignalsLast7Days DB error:', error);
       return [];
     }
+
     return data || [];
   }
 
   static async saveWeeklyRiskReport(payload: any): Promise<void> {
-    if (isLocalFallback) return;
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      data.weekly_risk_reports.push({
+        id: `risk-${Date.now()}`,
+        ...payload,
+        week_start_date: new Date().toISOString()
+      });
+      writeLocalDb(data);
+      return;
+    }
+
     const { error } = await supabase
       .from('weekly_risk_reports')
       .insert({ ...payload, week_start_date: new Date().toISOString() });
+
     if (error) console.error('saveWeeklyRiskReport DB error:', error);
   }
 }
-
