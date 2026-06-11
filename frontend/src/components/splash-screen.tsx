@@ -93,8 +93,11 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           height: 100%;
           border-radius: 50%;
           border: 1px solid rgba(255,255,255,0.06);
-          border-top: 1.5px solid rgba(255,255,255,0.9);
-          border-right: 1.5px solid rgba(255,255,255,0.4);
+          border-top: 1px solid rgba(255,255,255,0.8);
+          border-right: 1px solid rgba(255,255,255,0.3);
+          box-shadow: inset 0 0 10px rgba(255,255,255,0.02),
+                      -1px 0 3px rgba(255, 255, 255, 0.2), 
+                      1px 0 3px rgba(255, 255, 255, 0.4);
           will-change: transform;
         }
         /* Exact timings from chat-view */
