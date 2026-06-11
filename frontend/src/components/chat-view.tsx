@@ -26,7 +26,6 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
-  const pressTimer = useRef<NodeJS.Timeout | null>(null);
   const [greeting, setGreeting] = useState({ text: "Hi bro", accent: "execution kiya ?", animateAccent: true });
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -342,19 +341,16 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
     }
   };
 
-  const handleTouchStart = (id: string) => {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = setTimeout(() => {
+  const handleMessageClick = (e: React.MouseEvent | React.TouchEvent, id: string) => {
+    e.stopPropagation();
+    if (activeMessageId === id) {
+      setActiveMessageId(null);
+    } else {
       setActiveMessageId(id);
-      // Haptic feedback if supported
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(50);
       }
-    }, 700); // 700ms long press for better UX and micro-jitter tolerance
-  };
-
-  const handleTouchEnd = () => {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
+    }
   };
 
   const isInitial = messages.length === 0;
@@ -502,9 +498,8 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                       {isUser ? (
                         /* User message: Dark bubble with optional files */
                         <div 
-                          className="relative flex flex-col items-end group max-w-[80%]"
-                          onTouchStart={() => handleTouchStart(m.id)}
-                          onTouchEnd={handleTouchEnd}
+                          className="relative flex flex-col items-end group max-w-[80%] cursor-pointer md:cursor-auto"
+                          onClick={(e) => handleMessageClick(e, m.id)}
                         >
                           <div className="bg-white/[0.04] border border-white/[0.06] backdrop-blur-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] text-white text-[15px] font-medium leading-[1.6] px-5 py-3.5 rounded-[24px] select-text space-y-2.5 break-words max-w-full overflow-hidden">
                             {m.text && <div>{m.text}</div>}
@@ -559,9 +554,8 @@ export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
                       ) : (
                         /* FP message: Bubbleless raw text */
                         <div 
-                          className="relative flex-1 space-y-4 select-text min-w-0 max-w-full group"
-                          onTouchStart={() => handleTouchStart(m.id)}
-                          onTouchEnd={handleTouchEnd}
+                          className="relative flex-1 space-y-4 select-text min-w-0 max-w-full group cursor-pointer md:cursor-auto"
+                          onClick={(e) => handleMessageClick(e, m.id)}
                         >
                           <div className="font-sans text-[15.5px] leading-[1.7] text-white/90 whitespace-pre-wrap break-words overflow-x-auto tracking-wide drop-shadow-sm">
                             {m.text}
