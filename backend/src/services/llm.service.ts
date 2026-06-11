@@ -8,7 +8,7 @@ const HARDCODED_KEYS = [
 
 export async function executeWithRotation(
   payload: any,
-  maxRetries = 8
+  maxRetries = 12
 ): Promise<any> {
   const keys = [
     ...(process.env.AI_KEYS ? process.env.AI_KEYS.split(',') : []),
@@ -23,8 +23,8 @@ export async function executeWithRotation(
     throw new Error('No AI API Keys configured');
   }
 
-  // Multi-model rotation to bypass 503 high demand on specific node clusters
-  const fallbackModels = ['gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite-preview-02-05'];
+  // Multi-model rotation to bypass 503 high demand and 429 quota limits on specific node clusters
+  const fallbackModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite-preview-02-05', 'gemini-1.5-pro'];
   
   let lastError = null;
   
