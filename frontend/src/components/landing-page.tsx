@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowRight } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
+import { ParticleSphere } from "@/components/particle-sphere";
 
 interface LandingPageProps {
   onLock: () => void;
@@ -42,6 +43,9 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
   return (
     <div className="lp-root relative min-h-screen bg-black text-white flex flex-col justify-between overflow-hidden select-none font-sans">
+      
+      {/* 3D Animated Circular RGB Dot Background */}
+      <ParticleSphere />
 
       {/* Standard React CSS Injector */}
       <style>{`
