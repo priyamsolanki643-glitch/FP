@@ -99,12 +99,59 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
   }
 
   try {
+    const messageTrimmed = message.trim();
+    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi|hello|hey|yo|sup|hola|heyy|heyyy|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)\s*$/i.test(messageTrimmed);
+
+    if (isGreeting) {
+      const activeMission = await DbService.getActiveMission(actualUserId);
+      let currentThreadId = thread_id;
+      if (!currentThreadId) {
+        const newThread = await DbService.createChatThread(actualUserId, "Greeting Conversation");
+        currentThreadId = newThread.id;
+      }
+
+      await DbService.saveMessage(currentThreadId, actualUserId, 'user', message);
+
+      let responseText = "";
+      if (activeMission) {
+        responseText = `Hey bro! Lumensky here.
+
+Tera streak abhi ${activeMission.streakDays} days par hai.
+
+Consistency score ${activeMission.consistencyScore}% hai.
+
+Bata, aaj ka execution start karein? Kuch block chal raha hai kya? 🚀🔥`;
+      } else {
+        responseText = `Hey bro! Lumensky here.
+
+Batao, kya mast goal setup karna hai aaj?
+
+Apne targets set karein aur build karna start karein? 🚀🔥`;
+      }
+
+      await DbService.saveMessage(currentThreadId, actualUserId, 'fp', responseText);
+
+      return c.json({
+        status: 'success',
+        data: {
+          engine_result: { type: 'chat_response', data: {} },
+          ai_response: { response_text: responseText },
+          thread_id: currentThreadId
+        }
+      });
+    }
+    // Parallel DB and Vector Service Loading
+    const activeMissionPromise = DbService.getActiveMission(actualUserId);
+    const similarMemoriesPromise = VectorService.searchSimilarMemories(message, 2, 0.5).catch((err): any[] => {
+      console.error('Vector memory search failed:', err);
+      return [];
+    });
+
     let currentThreadId = thread_id;
     if (!currentThreadId) {
       let title = "New Conversation";
       try {
         const titlePrompt = `Summarize the following message into a concise 2-4 word topic or context suitable for a chat sidebar menu. Output ONLY the short title string and nothing else.\n\nMessage: "${message}"`;
-        // Quick background-priority generation to prevent hanging
         const titleRes = await LLMService.generateValidatedResponse(actualUserId, titlePrompt, [], [], 1, 1000, true);
         if (titleRes && titleRes.response_text) {
           title = titleRes.response_text.trim().replace(/^["']|["']$/g, '');
@@ -116,15 +163,20 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
       currentThreadId = newThread.id;
     }
 
-    // Save user message
-    await DbService.saveMessage(currentThreadId, actualUserId, 'user', message);
+    // Await all parallel background promises
+    let activeMission: any;
+    let similarMemories: any[];
+    const [retrievedMission, retrievedMemories, _] = await Promise.all([
+      activeMissionPromise,
+      similarMemoriesPromise,
+      DbService.saveMessage(currentThreadId, actualUserId, 'user', message)
+    ]);
+    activeMission = retrievedMission;
+    similarMemories = retrievedMemories;
 
     let result: any;
     let systemPrompt = '';
     let isTransitioningToExecution = false;
-    
-    // Check if user already has locked mission trajectory in DB
-    let activeMission = await DbService.getActiveMission(actualUserId);
 
     if (activeMission) {
       console.log(`MESSAGE: Found active locked mission for ${actualUserId}. Running execution/critique mode.`);
@@ -329,7 +381,14 @@ Ensure the returned JSON perfectly adheres to the MarketIntelligenceReport inter
     // Call LLM with the generated system prompt from the engine
     let llmResponse = { response_text: "System prompt generated, awaiting LLM..." };
     if (systemPrompt) {
-      const enrichedPrompt = systemPrompt + "\n\n" + 
+      let similarMemText = "";
+      if (similarMemories && similarMemories.length > 0) {
+        similarMemText = "\n\n## HIVE MIND SIMILAR TRAJECTORIES (PAST COHORT EXPERIENCES):\n" + 
+          similarMemories.map(m => `- Opportunity: ${m.mission_name} (${m.locked_path} path)\n  Result: ${m.outcome_summary}\n  Success/Consistency Score: ${m.success_rate}%`).join('\n') + 
+          "\nUse these past cohort references contextually in your reply (e.g. referencing dropshipping or freelance video editing failures/successes) if the user is pursuing something similar, to show real-world patterns.";
+      }
+
+      const enrichedPrompt = systemPrompt + similarMemText + "\n\n" + 
         (activeMission ? "If user explicitly logs a task completion/failure, set task_classification to 'completed' or 'failed'. **EXECUTION MIRROR LINGUISTIC RADAR**: At the end of your response, casually ask a 1-sentence question about their current execution/mission activity today. Analyze their incoming message text for hesitation words ('but', 'maybe', 'try') or abnormally short sentence length to detect early dropout risk signals (avoidance/stress)." : "Extract any onboarding constraints to build context, or prompt user to lock either Option A (Alpha) or Option B (Beta).");
       
       let smartResponse;
@@ -909,10 +968,10 @@ interactionRoutes.get('/market-report', async (c) => {
   }
   
   if (needsRefresh) {
-    console.log('MARKET_REPORT: Refreshing report data...');
-    const activeMission = await DbService.getActiveMission(userId);
-    if (activeMission) {
-      const mandate = `
+    console.log('MARKET_REPORT: Refreshing report data in the background...');
+    DbService.getActiveMission(userId).then((activeMission) => {
+      if (activeMission) {
+        const mandate = `
 ═══════════════════════════════════════════════════════════════
 FP-OS INTELLIGENCE RESEARCH MANDATE
 User Profile: ${userId}
@@ -927,15 +986,20 @@ MANDATE:
 Analyze real-time market opportunities, local gaps, competitor landscape, and timing signals for the target: "${activeMission.missionName}" using the ${activeMission.lockedPath} path.
 Provide hyper-local data for Kanpur, Uttar Pradesh, India if applicable, or general metrics for remote work.
 Ensure the returned JSON perfectly adheres to the MarketIntelligenceReport interface.
-      `.trim();
-      
-      try {
-        const groundedData = await LLMService.generateGroundedIntelligenceReport(mandate);
-        report = await DbService.saveMarketReport(userId, groundedData);
-      } catch (err) {
-        console.error('MARKET_REPORT: Failed to generate new report, using stale:', err);
+        `.trim();
+
+        LLMService.generateGroundedIntelligenceReport(mandate)
+          .then(async (groundedData) => {
+            await DbService.saveMarketReport(userId, groundedData);
+            console.log('MARKET_REPORT: Background report refreshed successfully.');
+          })
+          .catch((err) => {
+            console.error('MARKET_REPORT: Background generation failed:', err);
+          });
       }
-    }
+    }).catch(err => {
+      console.error('MARKET_REPORT: Failed to fetch active mission for background report:', err);
+    });
   }
   
   return c.json({
