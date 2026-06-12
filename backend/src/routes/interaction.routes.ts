@@ -172,18 +172,24 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
 
     let currentThreadId = thread_id;
     if (!currentThreadId) {
-      let title = "New Conversation";
-      try {
-        const titlePrompt = `Summarize the following message into a concise 2-4 word topic or context suitable for a chat sidebar menu. Output ONLY the short title string and nothing else.\n\nMessage: "${message}"`;
-        const titleRes = await LLMService.generateValidatedResponse(actualUserId, titlePrompt, [], [], 1, 1000, true);
-        if (titleRes && titleRes.response_text) {
-          title = titleRes.response_text.trim().replace(/^["']|["']$/g, '');
-        }
-      } catch (err) {
-        title = message.substring(0, 40) + (message.length > 40 ? '...' : '');
-      }
-      const newThread = await DbService.createChatThread(actualUserId, title);
+      // Use first 40 chars as instant title — update asynchronously in background
+      const instantTitle = message.substring(0, 40) + (message.length > 40 ? '...' : '');
+      const newThread = await DbService.createChatThread(actualUserId, instantTitle);
       currentThreadId = newThread.id;
+
+      // Background: generate a smart title and update the thread (non-blocking)
+      const threadIdForTitle = currentThreadId;
+      setImmediate(async () => {
+        try {
+          const titlePrompt = `Give a concise 2-4 word topic/title for this message (e.g. "UPSC Preparation", "Startup Idea"). Only output the title text, nothing else.\n\nMessage: "${message}"`;
+          const titleRes = await LLMService.generateValidatedResponse(actualUserId, titlePrompt, [], [], 1, 1000, true);
+          if (titleRes?.response_text) {
+            const cleanTitle = titleRes.response_text.trim().replace(/^["']/,'').replace(/["']$/,'');
+            if (cleanTitle) await DbService.updateThreadTitle(threadIdForTitle, cleanTitle);
+          }
+        } catch { /* non-critical — instant title stays */ }
+      });
+
     }
 
     // Await all parallel background promises

@@ -436,6 +436,19 @@ export class DbService {
     return data;
   }
 
+  static async updateThreadTitle(threadId: string, title: string): Promise<void> {
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      const thread = data.chat_threads.find((t: any) => t.id === threadId);
+      if (thread) { thread.title = title; writeLocalDb(data); }
+      return;
+    }
+    await supabase
+      .from('chat_threads')
+      .update({ title, updated_at: new Date().toISOString() })
+      .eq('id', threadId);
+  }
+
   static async getChatThreads(userId: string): Promise<any[]> {
     if (isLocalFallback) {
       const data = readLocalDb();
