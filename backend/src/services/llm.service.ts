@@ -414,6 +414,7 @@ YOU MUST IMPLEMENT THE FOLLOWING ADAPTIVE ENGINE RULES:
       };
 
       const response = await executeWithRotation({
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: strictPrompt }] }] as any,
         config: {
           responseMimeType: 'application/json',
@@ -464,6 +465,7 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       };
 
       const response = await executeWithRotation({
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: strictPrompt + "\n\nIMPORTANT: You must return the output in JSON format matching the schema: Array of objects with properties { id: string, title: string, category: string, opportunityScore: number, capitalRequired: number, timeToFirstRevenue: number, whyThisForThisUser: string }. Output ONLY valid JSON." }] }] as any,
         config: {
           temperature: 0.4,
@@ -485,6 +487,8 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
     try {
       const keys = [
         ...(process.env.AI_KEYS ? process.env.AI_KEYS.split(',') : []),
+        ...(process.env.GEMINI_KEYS ? process.env.GEMINI_KEYS.split(',') : []),
+        process.env.AI_PROVIDER_KEY,
         process.env.GEMINI_API_KEY,
         process.env.GOOGLE_API_KEY,
         ...HARDCODED_KEYS
@@ -549,6 +553,7 @@ Extract the parameters and output ONLY a JSON object matching the requested sche
       };
 
       const response = await executeWithRotation({
+        model: 'gemini-2.5-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }] as any,
         config: {
           responseMimeType: 'application/json',
