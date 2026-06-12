@@ -549,7 +549,7 @@ function TabMirror({ mirrorData }: { mirrorData?: MirrorData }) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
         <div className="text-[#52525b] text-xs font-mono tracking-widest uppercase">No execution data recorded yet</div>
-        <div className="text-[#3f3f46] text-[11px] max-w-xs leading-relaxed">Start executing your daily targets. FP will build your consistency graph automatically.</div>
+        <div className="text-[#3f3f46] text-[11px] max-w-xs leading-relaxed">Start executing your daily targets. Lumensky will build your consistency graph automatically.</div>
       </div>
     );
   }
@@ -637,7 +637,7 @@ function TabMirror({ mirrorData }: { mirrorData?: MirrorData }) {
               <span className="size-1 rounded-full bg-white" /> Strengths Detected
             </div>
             {strengths.length === 0 ? (
-              <div className="text-[#52525b] text-xs font-mono">FP will map your strengths after consistent daily execution.</div>
+              <div className="text-[#52525b] text-xs font-mono">Lumensky will map your strengths after consistent daily execution.</div>
             ) : (
               <ul className="space-y-3 text-xs text-[#d4d4d8] leading-relaxed">
                 {strengths.map((s: string, idx: number) => (

@@ -164,6 +164,7 @@ export async function executeWithRotation(
   }
 
   throw lastError;
+
 }
 
 function cleanAndParseJSON(text: string): any {
@@ -296,7 +297,7 @@ export class LLMService {
       };
 
       const fullContents = [
-        { role: 'user', parts: [{ text: systemPrompt + "\n\nCRITICAL: Maintain the Axis AI persona as defined in the system prompt." }] },
+        { role: 'user', parts: [{ text: systemPrompt + "\n\nCRITICAL: Maintain the Lumensky persona as defined in the system prompt." }] },
         ...conversationHistory
       ];
 
