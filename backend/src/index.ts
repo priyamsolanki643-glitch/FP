@@ -28,18 +28,7 @@ app.use('*', requireIdempotency);
 app.onError((err: any, c) => {
   console.error('Global Route Error:', err);
   const msg: string = err.message || '';
-  
-  const isQuota = msg.toLowerCase().includes('quota') || 
-                  msg.toLowerCase().includes('429') || 
-                  msg.toLowerCase().includes('resource_exhausted') ||
-                  msg.toLowerCase().includes('rate limit');
-                  
-  if (isQuota) {
-    return c.json({ success: false, message: "AI is busy right now. Please retry in about a minute." }, 503);
-  }
-  
-  // For standard errors
-  return c.json({ success: false, message: "Something went wrong while generating the reply. Please try again." }, 503);
+  return c.json({ success: false, message: `Something went wrong: ${msg}` }, 503);
 });
 
 
