@@ -24,6 +24,7 @@ export async function runInvasionDemo() {
 
     // 1. Generate Fake Mission
     await DbService.saveMission({
+      id: uuidv4(),
       user_id: userId,
       missionName: `${targetExam} Selection Sprint`,
       lockedPath: 'alpha',
@@ -40,6 +41,7 @@ export async function runInvasionDemo() {
 
     // 2. Generate Weekly Risk Report
     await DbService.saveWeeklyRiskReport({
+      id: uuidv4(),
       user_id: userId,
       dropout_risk_score: isRedBand ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 30),
       dominant_avoidance_subject: failingSubject,
@@ -57,7 +59,7 @@ export async function runInvasionDemo() {
   console.log("B2B Dashboard is now primed for the 20-Crore Pitch.");
 }
 
-// Allow direct execution
-if (require.main === module) {
-  runInvasionDemo().then(() => process.exit(0)).catch(console.error);
-}
+// Execute directly
+runInvasionDemo().then(() => {
+  console.log("Done");
+}).catch(console.error);

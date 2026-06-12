@@ -19,13 +19,15 @@
     "@hono/zod-validator": "^0.8.0",
     "@supabase/supabase-js": "^2.107.0",
     "hono": "^4.12.23",
-    "ws": "^8.21.0",
-    "zod": "^4.4.3",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "uuid": "^14.0.0",
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
+    "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1"
   }
 }
