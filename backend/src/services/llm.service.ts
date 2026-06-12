@@ -263,10 +263,10 @@ export class LLMService {
       ];
 
       const response = await executeWithRotation({
+        model: modelName || 'gemini-2.5-flash',
         contents: fullContents as any,
         config: {
-          temperature: 0.3,
-          tools: [{ googleSearch: {} }],
+          temperature: 0.3
         }
       });
 
