@@ -13,15 +13,11 @@ steps:
     args:
       - '-c'
       - |
-        KEY_VAL="$_AI_PROVIDER_KEY"
-        if [ -z "$$KEY_VAL" ]; then
-          PART1="AQ.Ab8RN6I_Bz"
-          PART2="auKaMhzBmbQbY-K"
-          PART3="knqXhO2S0qtNnO-"
-          PART4="AmZih_oI6A"
-          KEY_VAL="$$PART1$$PART2$$PART3$$PART4"
+        ENV_VARS="SYSTEM_REALISM_MODE=BRUTAL_EXPLICIT,SUPABASE_URL=$_SUPABASE_URL,SUPABASE_SERVICE_KEY=$_SUPABASE_SERVICE_KEY"
+        if [ -n "$_AI_PROVIDER_KEY" ]; then
+          ENV_VARS="AI_PROVIDER_KEY=$_AI_PROVIDER_KEY,$$ENV_VARS"
         fi
-        gcloud run deploy fp --image=gcr.io/$PROJECT_ID/github.com/priyamsolanki643-glitch/fp:$COMMIT_SHA --region=europe-west1 --platform=managed --allow-unauthenticated --update-env-vars="AI_PROVIDER_KEY=$$KEY_VAL,SYSTEM_REALISM_MODE=BRUTAL_EXPLICIT,SUPABASE_URL=$_SUPABASE_URL,SUPABASE_SERVICE_KEY=$_SUPABASE_SERVICE_KEY"
+        gcloud run deploy fp --image=gcr.io/$PROJECT_ID/github.com/priyamsolanki643-glitch/fp:$COMMIT_SHA --region=europe-west1 --platform=managed --allow-unauthenticated --update-env-vars="$$ENV_VARS"
 
 options:
   logging: CLOUD_LOGGING_ONLY

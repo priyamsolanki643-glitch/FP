@@ -14,16 +14,11 @@ steps:
       - 'gcr.io/$PROJECT_ID/fp-backend:$COMMIT_SHA'
 
   # Step 3: Deploy directly to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        PART1="AQ.Ab8RN6I_Bz"
-        PART2="auKaMhzBmbQbY-K"
-        PART3="knqXhO2S0qtNnO-"
-        PART4="AmZih_oI6A"
-        gcloud run services update fp-backend --image=gcr.io/$PROJECT_ID/fp-backend:$COMMIT_SHA --region=us-central1 --platform=managed --allow-unauthenticated --port=8080 --set-env-vars="AI_PROVIDER_KEY=$${PART1}$${PART2}$${PART3}$${PART4},SYSTEM_REALISM_MODE=BRUTAL_EXPLICIT,PORT=8080,SUPABASE_URL=https://kscqvigvcfjdulonvdxa.supabase.co,SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzY3F2aWd2Y2ZqZHVsb252ZHhhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDY2MjAxMywiZXhwIjoyMDk2MjM4MDEzfQ.lNlB6nnfaeP9UADMPrMLBh0NzXr_EK6GYZB8TszR_KM"
+        ENV_VARS="SYSTEM_REALISM_MODE=BRUTAL_EXPLICIT,PORT=8080,SUPABASE_URL=https://kscqvigvcfjdulonvdxa.supabase.co,SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtzY3F2aWd2Y2ZqZHVsb252ZHhhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDY2MjAxMywiZXhwIjoyMDk2MjM4MDEzfQ.lNlB6nnfaeP9UADMPrMLBh0NzXr_EK6GYZB8TszR_KM"
+        if [ -n "$_AI_PROVIDER_KEY" ]; then
+          ENV_VARS="AI_PROVIDER_KEY=$_AI_PROVIDER_KEY,$$ENV_VARS"
+        fi
+        gcloud run services update fp-backend --image=gcr.io/$PROJECT_ID/fp-backend:$COMMIT_SHA --region=us-central1 --platform=managed --allow-unauthenticated --port=8080 --update-env-vars="$$ENV_VARS"
 
 
 images:
