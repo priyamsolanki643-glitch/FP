@@ -44,7 +44,7 @@ function sanitizeErrorMessage(err: any): string {
     msg.includes('429') ||
     msg.includes('rate limit')
   ) {
-    return 'AI is busy right now. Please retry in about a minute.';
+    return 'Bhai meri taraf se engine thoda overload ho gaya hai (API Limit Exhausted). Google waalon ne free requests block kar di hain 1 minute ke liye. Jab tak main reboot marta hoon, tu chup chaap jaakar apna agla task revise kar. Time waste mat kar!';
   }
 
   return 'Temporary websocket error. Please reconnect.';

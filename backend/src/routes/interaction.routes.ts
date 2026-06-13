@@ -64,15 +64,15 @@ function toUserSafeAIText(err: any): string {
   const message = rawMessage.toLowerCase();
 
   if (isQuotaStyleError(message)) {
-    return 'AI is busy right now. Please retry in about a minute.';
+    return 'Bhai meri taraf se engine thoda overload ho gaya hai (API Limit Exhausted). Google waalon ne free requests block kar di hain 1 minute ke liye. Jab tak main reboot marta hoon, tu chup chaap jaakar apna agla task revise kar. Time waste mat kar!';
   }
 
   if (isRetryableAIError(message)) {
-    return 'Temporary AI issue on the backend. Please retry in a moment.';
+    return 'Bhai thoda temporary network issue aa raha hai backend pe. 10 second ruk ke dobara message bhej.';
   }
 
   // TEMPORARY DEBUG: Return actual error so we can see what's failing
-  return `[DEBUG ERROR]: ${rawMessage}`;
+  return `[SYSTEM OVERLOAD]: Bhai backend mein error hai, dhyan se check kar: ${rawMessage}`;
 }
 import { DbService } from '../services/db.service';
 import { VectorService } from '../services/vector.service';
