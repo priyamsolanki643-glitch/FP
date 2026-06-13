@@ -204,7 +204,7 @@ export function VaultModal({ onClose }: VaultModalProps) {
               </div>
               <div>
                 <div className="text-[10px] font-mono text-white/50 tracking-[0.22em] uppercase mb-0.5 flex items-center gap-1.5">
-                  <span className="size-1.5 rounded-full bg-white animate-pulse" /> LIVE DEMO PROJECTION
+                  <span className="size-1.5 rounded-full bg-white animate-pulse" /> LIVE TELEMETRY
                 </div>
                 <h1 className="text-base sm:text-lg md:text-2xl font-semibold text-white tracking-tight flex items-center gap-2 font-display">
                   THE VAULT <span className="text-[10px] bg-white/[0.05] border border-white/[0.08] text-white/80 px-2 py-0.5 rounded-full font-mono font-medium uppercase tracking-wider">Rahul M.</span>

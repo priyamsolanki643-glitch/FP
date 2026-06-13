@@ -91,7 +91,7 @@ export default function CMOTerminal() {
             </div>
             <div>
               <h1 className="text-white font-bold tracking-tight">PW Enterprise Intelligence</h1>
-              <p className="text-xs text-green-500 font-mono">FP-OS LOGIC ENGINE • DEMO MODE</p>
+              <p className="text-xs text-green-500 font-mono">FP-OS LOGIC ENGINE • PRODUCTION</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
