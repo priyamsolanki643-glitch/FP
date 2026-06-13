@@ -538,7 +538,7 @@ export function ChatView({ onOpenSidebar, onOpenVault, onOpenFocusMode }: ChatVi
                           {/* Actions row for user */}
                           <div className={`flex items-center gap-3 transition-all duration-300 text-[#a1a1aa] ${
                             activeMessageId === m.id 
-                              ? "absolute -top-12 right-0 bg-black text-white px-4 py-2.5 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] opacity-100 scale-100 z-50 border border-white/5" 
+                              ? "absolute top-full mt-2 right-0 bg-[#1a1a1a] text-white px-4 py-2.5 rounded-2xl shadow-xl opacity-100 scale-100 z-50 border border-white/10" 
                               : "opacity-0 md:group-hover:opacity-100 mt-1.5 scale-95 md:scale-100"
                           }`}>
                             <button 
@@ -574,7 +574,7 @@ export function ChatView({ onOpenSidebar, onOpenVault, onOpenFocusMode }: ChatVi
                           {/* Actions row */}
                           <div className={`flex items-center gap-4 transition-all duration-300 text-[#a1a1aa] ${
                             activeMessageId === m.id 
-                              ? "absolute -top-12 left-0 bg-black text-white px-4 py-2.5 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] opacity-100 scale-100 z-50 border border-white/5" 
+                              ? "absolute top-full mt-2 left-0 bg-[#1a1a1a] text-white px-4 py-2.5 rounded-2xl shadow-xl opacity-100 scale-100 z-50 border border-white/10" 
                               : "opacity-0 md:group-hover:opacity-100 pt-2 scale-95 md:scale-100"
                           }`}>
                             <button 

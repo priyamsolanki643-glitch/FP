@@ -116,7 +116,7 @@ export default function CMOTerminal() {
 
             <SectionHeader title="Retention Impact" icon={TrendingUp} subtitle="Projected Day-30 Batch Retention vs Industry Avg" />
             
-            <div className="flex items-end gap-6 mb-6">
+            <div className="flex flex-wrap items-end gap-6 mb-6">
               <div>
                 <div className="text-4xl font-bold text-green-500">76%</div>
                 <div className="text-sm text-zinc-400 mt-1">FP-OS Projection</div>

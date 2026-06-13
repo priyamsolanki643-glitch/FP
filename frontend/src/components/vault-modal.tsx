@@ -642,7 +642,7 @@ function TabDebt({ missionData }: { missionData?: MissionData }) {
     <div className="space-y-6 animate-fade-in w-full">
       {/* Metrics Row: Grid layout for responsive sizing */}
       <div className="glass-card rounded-2xl p-4 sm:p-8">
-        <div className="grid grid-cols-3 gap-2 sm:gap-6 w-full max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-6 w-full max-w-3xl mx-auto">
           <Dial 
             title="CONSISTENCY" 
             value={consistencyText} 
