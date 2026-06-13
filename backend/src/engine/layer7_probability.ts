@@ -63,10 +63,20 @@ function capabilityComponent(trueCapabilityScore: number): number {
  * Runway contribution — financial survivability is a major probability driver
  */
 function runwayComponent(runwayDays: number): number {
-  if (runwayDays >= 180) return 0.15;   // 6 months+ = maximum contribution
-  if (runwayDays >= 90) return 0.10;
-  if (runwayDays >= 45) return 0.05;
-  return -0.10;                          // Red band = negative contribution (active drag)
+  if (runwayDays <= 0) return -0.15;
+  
+  // Continuous exponential scaling for runway runway contribution (maxes out at 0.15)
+  const growthRate = 0.02; // Determines how fast the curve climbs to max 0.15
+  const baseContribution = 0.15 * (1 - Math.exp(-growthRate * runwayDays));
+  
+  // Apply an exponential penalty for runway falling into the red band (< 45 days)
+  if (runwayDays < 45) {
+    const penaltyExponent = 0.08;
+    const penalty = 0.15 * Math.exp(-penaltyExponent * runwayDays);
+    return baseContribution - penalty;
+  }
+  
+  return baseContribution;
 }
 
 /**

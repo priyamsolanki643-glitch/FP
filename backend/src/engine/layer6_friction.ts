@@ -127,27 +127,33 @@ export function calculateFrictionCoefficient(
   psychometric: PsychometricCluster,
   detectedSignalIds: string[],
 ): number {
-  // Start from psychometric baseline
-  let frictionScore = psychometric.procrastinationScore * 0.40;  // 40% from procrastination score
-  frictionScore += (1 - psychometric.baselineDiscipline) * 0.25;  // 25% from discipline (inverted)
-  frictionScore += (1 - psychometric.emotionalResilience) * 0.10; // 10% from resilience (inverted)
+  // 1. Calculate raw linear friction inputs
+  let rawInput = psychometric.procrastinationScore * 0.45;  // Weighted procrastination
+  rawInput += (1 - psychometric.baselineDiscipline) * 0.30;  // Lack of discipline weight
+  rawInput += (1 - psychometric.emotionalResilience) * 0.15; // Low resilience weight
 
-  // Apply cognitive endurance factor
+  // Apply cognitive endurance factor to the raw input
   const enduranceMinutes = psychometric.cognitiveEnduranceMinutes;
-  if (enduranceMinutes < 30) frictionScore += 0.20;
-  else if (enduranceMinutes < 60) frictionScore += 0.12;
-  else if (enduranceMinutes < 90) frictionScore += 0.05;
-  else if (enduranceMinutes > 180) frictionScore -= 0.08; // High endurance = friction reducer
+  if (enduranceMinutes < 30) rawInput += 0.20;
+  else if (enduranceMinutes < 60) rawInput += 0.12;
+  else if (enduranceMinutes < 90) rawInput += 0.05;
+  else if (enduranceMinutes > 180) rawInput -= 0.08; // High endurance reduces raw friction input
 
   // Apply behavioral signal overlay
   for (const signalId of detectedSignalIds) {
     const signal = FRICTION_SIGNALS.find((s) => s.id === signalId);
     if (signal) {
-      frictionScore += signal.frictionWeight;
+      rawInput += signal.frictionWeight;
     }
   }
 
-  return Math.max(0, Math.min(1.0, frictionScore));
+  // 2. Sigmoid activation mapping: translates the raw score to a non-linear 0-1 scale.
+  // This simulates how small friction factors build compounding execution barriers.
+  const steepness = 6.0;
+  const midpoint = 0.45;
+  const sigmoidFriction = 1 / (1 + Math.exp(-steepness * (rawInput - midpoint)));
+
+  return Math.max(0, Math.min(1.0, sigmoidFriction));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

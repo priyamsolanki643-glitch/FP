@@ -312,16 +312,30 @@ export async function generateDailyTaskSprint(
     );
   }
 
-  // ADAPTIVE LOAD BALANCING (Layer 11/12 Integration)
-  const isMicroSprintNeeded = (strategyState.consecutiveFailureCount && strategyState.consecutiveFailureCount >= 3) || strategyState.consistencyScore < 50;
+  // ADAPTIVE LOAD BALANCING & GRADUATED DYNAMIC TASK SHRINKING
+  const consistency = strategyState.consistencyScore;
+  const consecutiveFailures = strategyState.consecutiveFailureCount || 0;
 
-  if (isMicroSprintNeeded) {
+  if (consistency < 30 || consecutiveFailures >= 3) {
+    // Stage 1: Critical Procrastination Loop -> Impossibly small 15-minute task to build momentum
     tasks = [{
-      id: `micro_sprint_recovery_${dayNumber}`,
-      title: "Consistency Recovery Micro-Sprint",
-      description: "Set a timer for 15 minutes. Open your primary development environment, identify the single smallest step to resolve the active blocker, and execute it. Your objective is simply to start, overcoming the friction of avoidance.",
-      metricBound: "Complete: 15 minutes of documented focus logged. Initial trace verified.",
+      id: `micro_sprint_critical_recovery_${dayNumber}`,
+      title: "15-Min Critical Recovery Sprint",
+      description: "Consistency has dropped to crisis levels. Do not attempt a full session. Set a timer for 15 minutes, open your primary workspace, perform the absolute smallest action to move the project forward, and stop.",
+      metricBound: "Complete: 15 minutes of documented focus logged. Operator verified.",
       timeAllocationHours: 0.25,
+      isCompleted: false,
+      phase,
+      compressionResistance: 'high' as const
+    }];
+  } else if (consistency < 50 || consecutiveFailures >= 2) {
+    // Stage 2: Warning Loop -> Max 1 task, compressed to 45 minutes to rebuild consistency
+    tasks = [{
+      id: `sprint_warning_recovery_${dayNumber}`,
+      title: "45-Min Consistency Recovery Sprint",
+      description: "Your consistency score is slipping. To prevent a failure loop, your daily execution load is compressed. Focus on completing the primary task step with zero distractions.",
+      metricBound: "Complete: Primary sub-task fully delivered and logged.",
+      timeAllocationHours: 0.75,
       isCompleted: false,
       phase,
       compressionResistance: 'high' as const
