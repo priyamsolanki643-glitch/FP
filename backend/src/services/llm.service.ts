@@ -125,7 +125,7 @@ export async function executeWithRotation(
     }
   }
 
-  throw lastError;
+  throw lastError || new Error('All configured AI API keys are currently in cooldown (resource_exhausted). Please retry in a minute.');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
