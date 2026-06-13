@@ -62,7 +62,7 @@ app.get('/api/test-ai', async (c) => {
       try {
         const client = new GoogleGenAI({ apiKey: keys[i] });
         const resp = await client.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-2.5-flash',
           contents: [{ role: 'user', parts: [{ text: 'Reply with exactly: OK' }] }],
           config: { maxOutputTokens: 10 }
         });
