@@ -7,6 +7,7 @@ import { ArrowUp, Mic, Plus, Menu, Globe, Image, ThumbsUp, ThumbsDown, Share2, C
 interface ChatViewProps {
   onOpenSidebar: () => void;
   onOpenVault: () => void;
+  onOpenFocusMode?: () => void;
 }
 
 interface Message {
@@ -18,7 +19,7 @@ interface Message {
 
 
 
-export function ChatView({ onOpenSidebar, onOpenVault }: ChatViewProps) {
+export function ChatView({ onOpenSidebar, onOpenVault, onOpenFocusMode }: ChatViewProps) {
   const router = useRouter();
   const [simulationData, setSimulationData] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);

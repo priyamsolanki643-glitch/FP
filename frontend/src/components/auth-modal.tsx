@@ -7,6 +7,7 @@ import { X, ArrowRight, Mail, Fingerprint, Loader2, User, KeyRound } from "lucid
 interface AuthModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialMode?: "login" | "signup";
 }
 
 export function AuthModal({ onClose, onSuccess, initialMode = "signup" }: AuthModalProps) {
