@@ -86,11 +86,8 @@ export default function PathSelection() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-<<<<<<< Updated upstream
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}`
-=======
-          "Authorization": `Bearer ${session?.access_token}`
->>>>>>> Stashed changes
+"Authorization": `Bearer ${session?.access_token}`
+
         },
         body: JSON.stringify(payload)
       });

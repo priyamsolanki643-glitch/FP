@@ -8,11 +8,8 @@ import {
   Layers, Check, X, 
   CornerDownLeft, AlertTriangle, RefreshCw 
 } from "lucide-react";
-<<<<<<< Updated upstream
-import { ParticleSphere } from "./particle-sphere";
-=======
 import { supabase } from "@/utils/supabase/client";
->>>>>>> Stashed changes
+
 
 interface Task {
   id: string;
@@ -74,16 +71,11 @@ export function ExecutionCockpit() {
   async function fetchActiveMission() {
     setLoading(true);
     try {
-<<<<<<< Updated upstream
+const { data: { session } } = await supabase.auth.getSession();
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-      const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission?userId=test-user`, {
-        headers: { "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}` }
-=======
-      const { data: { session } } = await supabase.auth.getSession();
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission`, {
         headers: { "Authorization": `Bearer ${session?.access_token}` }
->>>>>>> Stashed changes
+
       });
       const result = await res.json();
       
@@ -108,22 +100,16 @@ export function ExecutionCockpit() {
         return;
       }
       const diagData = JSON.parse(cachedDiag);
-<<<<<<< Updated upstream
+const { data: { session } } = await supabase.auth.getSession();
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-=======
-      const { data: { session } } = await supabase.auth.getSession();
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
->>>>>>> Stashed changes
+
       
       const res = await fetch(`${baseUrl}/api/v1/interaction/operator/current-tasks`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-<<<<<<< Updated upstream
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}`
-=======
-          "Authorization": `Bearer ${session?.access_token}`
->>>>>>> Stashed changes
+"Authorization": `Bearer ${session?.access_token}`
+
         },
         body: JSON.stringify({
           dayNumber: activeMission.dayNumber,
@@ -194,11 +180,8 @@ export function ExecutionCockpit() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-<<<<<<< Updated upstream
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}`
-=======
-          "Authorization": `Bearer ${session?.access_token}`
->>>>>>> Stashed changes
+"Authorization": `Bearer ${session?.access_token}`
+
         },
         body: JSON.stringify(payload)
       });
@@ -254,21 +237,15 @@ export function ExecutionCockpit() {
       }));
       historyPayload.push({ role: "user", parts: [{ text }] });
 
-<<<<<<< Updated upstream
+const { data: { session } } = await supabase.auth.getSession();
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-=======
-      const { data: { session } } = await supabase.auth.getSession();
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
->>>>>>> Stashed changes
+
       const res = await fetch(`${baseUrl}/api/v1/interaction/message`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-<<<<<<< Updated upstream
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}`
-=======
-          "Authorization": `Bearer ${session?.access_token}`
->>>>>>> Stashed changes
+"Authorization": `Bearer ${session?.access_token}`
+
         },
         body: JSON.stringify({
           message: text,

@@ -64,18 +64,12 @@ export function Sidebar({ onOpenVault, onSignOut, isOpen, setIsOpen }: SidebarPr
     setActiveChatMenu(null);
 
     try {
-<<<<<<< Updated upstream
+const { data: { session } } = await supabase.auth.getSession();
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
       await fetch(`${baseUrl}/api/v1/threads/${threadId}`, {
         method: 'DELETE',
-        headers: { "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}` }
-=======
-      const { data: { session } } = await supabase.auth.getSession();
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      await fetch(`${baseUrl}/api/v1/threads/${threadId}`, {
-        method: 'DELETE',
         headers: { "Authorization": `Bearer ${session?.access_token}` }
->>>>>>> Stashed changes
+
       });
       fetchThreads();
     } catch (err) {
@@ -86,16 +80,11 @@ export function Sidebar({ onOpenVault, onSignOut, isOpen, setIsOpen }: SidebarPr
 
   const fetchThreads = async () => {
     try {
-<<<<<<< Updated upstream
+const { data: { session } } = await supabase.auth.getSession();
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
       const res = await fetch(`${baseUrl}/api/v1/threads?t=${Date.now()}`, {
-        headers: { "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}` },
-=======
-      const { data: { session } } = await supabase.auth.getSession();
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${baseUrl}/api/v1/threads?t=${Date.now()}`, {
         headers: { "Authorization": `Bearer ${session?.access_token}` },
->>>>>>> Stashed changes
+
         cache: 'no-store'
       });
       const data = await res.json();

@@ -23,16 +23,11 @@ export default function EntryPoint() {
   useEffect(() => {
     const checkActiveMission = async () => {
       try {
-<<<<<<< Updated upstream
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-        const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission`, {
-          headers: { "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}` }
-=======
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission`, {
           headers: { "Authorization": `Bearer ${session?.access_token}` }
->>>>>>> Stashed changes
+
         });
         const result = await res.json();
         if (result?.data) {

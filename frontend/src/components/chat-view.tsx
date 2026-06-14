@@ -4,11 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Mic, Plus, Menu, Globe, Image, ThumbsUp, ThumbsDown, Share2, Copy, Target, Camera, Paperclip, X, ChevronRight, ChevronLeft, Cpu, Edit, RefreshCw } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
-<<<<<<< Updated upstream
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-=======
->>>>>>> Stashed changes
+
 
 interface ChatViewProps {
   onOpenSidebar: () => void;
@@ -111,16 +107,11 @@ export function ChatView({ onOpenSidebar, onOpenVault, onOpenFocusMode }: ChatVi
       setIsThinking(true);
       
       try {
-<<<<<<< Updated upstream
+const { data: { session } } = await supabase.auth.getSession();
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
         const res = await fetch(`${baseUrl}/api/v1/threads/${tId}/messages`, {
-          headers: { "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}` }
-=======
-        const { data: { session } } = await supabase.auth.getSession();
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const res = await fetch(`${baseUrl}/api/v1/threads/${tId}/messages`, {
           headers: { "Authorization": `Bearer ${session?.access_token}` }
->>>>>>> Stashed changes
+
         });
         const data = await res.json();
         
@@ -264,21 +255,15 @@ export function ChatView({ onOpenSidebar, onOpenVault, onOpenFocusMode }: ChatVi
         parts: [{ text }]
       });
 
-<<<<<<< Updated upstream
+const { data: { session } } = await supabase.auth.getSession();
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-=======
-      const { data: { session } } = await supabase.auth.getSession();
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
->>>>>>> Stashed changes
+
       const res = await fetch(`${baseUrl}/api/v1/interaction/message`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-<<<<<<< Updated upstream
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || 'test-user'}` 
-=======
-          "Authorization": `Bearer ${session?.access_token}` 
->>>>>>> Stashed changes
+"Authorization": `Bearer ${session?.access_token}` 
+
         },
         body: JSON.stringify({
           message: text,
