@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 import { AuthModal } from "@/components/auth-modal";
 import { ParticleSphere } from "@/components/particle-sphere";
+import { MagneticButton } from "@/components/magnetic-button";
 
 interface LandingPageProps {
   onLock: () => void;
@@ -154,9 +155,11 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
         className="flex items-center justify-end px-6 py-6 relative z-20 w-full transition-opacity duration-700"
         style={{ opacity: visible && !isExiting ? 1 : 0 }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 z-20">
           <button onClick={() => { setAuthMode("signup"); setIsAuthOpen(true); }} className="btn-ghost-auth">Sign up</button>
-          <button onClick={() => { setAuthMode("login"); setIsAuthOpen(true); }} className="btn-white-pill-sm">Log in</button>
+          <MagneticButton>
+            <button onClick={() => { setAuthMode("login"); setIsAuthOpen(true); }} className="btn-white-pill-sm">Log in</button>
+          </MagneticButton>
         </div>
       </header>
 
@@ -203,11 +206,13 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           </p>
 
           {/* Centered CTA Row */}
-          <div className="flex justify-center w-full relative">
-            <button className="btn-white-pill group" onClick={handleStart}>
-              <span>Get started</span>
-              <ArrowRight size={20} className="arrow-icon" />
-            </button>
+          <div className="flex justify-center w-full relative z-20">
+            <MagneticButton strength={30}>
+              <button className="btn-white-pill group" onClick={handleStart}>
+                <span>Get started</span>
+                <ArrowRight size={20} className="arrow-icon" />
+              </button>
+            </MagneticButton>
           </div>
         </div>
       </main>
