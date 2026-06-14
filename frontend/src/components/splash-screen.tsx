@@ -36,11 +36,11 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
       {/* Deep Vignette for absolute center focus */}
       <div className="absolute inset-0 pointer-events-none z-1" style={{ background: 'radial-gradient(circle at 50% 50%, transparent 20%, rgba(0,0,0,1) 95%)' }} />
 
-      {/* Cinematic Shockwave Layer (Replaces blinding white flash) */}
+      {/* Cinematic Shockwave Layer (Soft white radial glow instead of stark white background) */}
       <div 
         className={`absolute inset-0 z-50 pointer-events-none mix-blend-screen transition-all duration-300 ease-out ${phase >= 3 ? 'opacity-100' : 'opacity-0'}`} 
       >
-         <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl ${phase >= 3 ? 'w-[150vw] h-[150vw] bg-[radial-gradient(circle,rgba(255,42,42,0.4)_0%,rgba(0,0,0,0)_70%)]' : 'w-0 h-0 bg-[radial-gradient(circle,rgba(255,42,42,1)_0%,rgba(0,0,0,0)_100%)]'} transition-all duration-300 ease-out`} />
+         <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl ${phase >= 3 ? 'w-[150vw] h-[150vw] bg-[radial-gradient(circle,rgba(255,255,255,0.25)_0%,rgba(0,0,0,0)_70%)]' : 'w-0 h-0 bg-[radial-gradient(circle,rgba(255,255,255,0.8)_0%,rgba(0,0,0,0)_100%)]'} transition-all duration-300 ease-out`} />
       </div>
 
       <style>{`
@@ -63,11 +63,11 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
 
         .gyro-core {
           position: absolute;
-          width: 4px;
-          height: 4px;
-          background: #ff2a2a; /* Hostile AI Blood Red */
+          width: 3px;
+          height: 3px;
+          background: #ffffff;
           border-radius: 50%;
-          animation: corePulse 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+          animation: corePulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
         }
         .gyro-ring {
           position: absolute;
@@ -86,15 +86,15 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         .ring-2 { animation: spin2 2.4s linear infinite; }
         .ring-3 { animation: spin3 3s linear infinite; }
 
-        /* Particle Burst System - Now infused with accent color */
+        /* Particle Burst System */
         .particle {
           position: absolute;
           width: 1.5px;
           height: 1.5px;
-          background: #ff2a2a;
+          background: #ffffff;
           border-radius: 50%;
           opacity: 0;
-          box-shadow: 0 0 6px #ff2a2a;
+          box-shadow: 0 0 4px #ffffff;
         }
         .gyro-container.phase-1 .p1 { animation: shoot1 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .gyro-container.phase-1 .p2 { animation: shoot2 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -120,8 +120,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
         }
         
         @keyframes corePulse {
-          0% { transform: scale(0.5); opacity: 0.6; box-shadow: 0 0 4px rgba(255, 42, 42, 0.3); }
-          100% { transform: scale(1.8); opacity: 1; box-shadow: 0 0 25px rgba(255, 42, 42, 1), 0 0 10px rgba(255, 255, 255, 0.4); }
+          0% { transform: scale(0.5); opacity: 0.3; box-shadow: 0 0 2px rgba(255,255,255,0.1); }
+          100% { transform: scale(1.5); opacity: 1; box-shadow: 0 0 15px rgba(255,255,255,1); }
         }
 
         .lumensky-text {
