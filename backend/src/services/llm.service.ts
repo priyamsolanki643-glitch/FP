@@ -265,9 +265,9 @@ export class LLMService {
         model: modelName || 'gemini-2.5-flash',
         contents: safeContents as any,
         config: {
-          systemInstruction: cleanSystemInstruction,
+          systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
           temperature: 0.9,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 4096,
         }
       });
 
@@ -285,9 +285,9 @@ export class LLMService {
           model: 'gemini-2.0-flash',
           contents: safeContents as any,
           config: {
-            systemInstruction: cleanSystemInstruction,
+            systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
             temperature: 0.7,
-            maxOutputTokens: 512,
+            maxOutputTokens: 2048,
           }
         });
 
