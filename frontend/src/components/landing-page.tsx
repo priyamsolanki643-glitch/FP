@@ -134,16 +134,6 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           color: #ffffff;
           background: rgba(255,255,255,0.05);
         }
-
-        /* Mobile Stagger Animations with God-level blur entrance */
-        @keyframes fadeUpInGod {
-          from { opacity: 0; transform: translateY(24px) scale(0.98); filter: blur(4px); }
-          to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0px); }
-        }
-        .stagger-god-1 { animation: fadeUpInGod 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.1s; opacity: 0; }
-        .stagger-god-2 { animation: fadeUpInGod 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.25s; opacity: 0; }
-        .stagger-god-3 { animation: fadeUpInGod 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.4s; opacity: 0; }
-        .stagger-god-4 { animation: fadeUpInGod 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.55s; opacity: 0; }
         
         .god-text-shadow {
           text-shadow: 0 4px 24px rgba(255, 255, 255, 0.25);
@@ -155,7 +145,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           background-size: 200% auto;
           -webkit-background-clip: text;
           background-clip: text;
-          animation: shimmer 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          animation: shimmer 4s linear infinite;
         }
         @keyframes shimmer {
           0%  { background-position: -200% 0; }
@@ -204,7 +194,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           <h1 className="font-display mb-8 flex flex-col items-center">
             {/* First Line */}
             <div 
-              className="stagger-god-1 tracking-tight pb-1 text-[#a1a1aa] leading-[1.0] whitespace-nowrap"
+              className="tracking-tight pb-1 text-[#a1a1aa] leading-[1.0] whitespace-nowrap"
               style={{ fontSize: "clamp(2.0rem, 10vw, 5.0rem)", fontWeight: 400 }}
             >
               Stop planning.
@@ -212,7 +202,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
             
             {/* Second Line */}
             <div 
-              className="stagger-god-2 tracking-tighter pb-2 leading-[1.1] whitespace-nowrap"
+              className="tracking-tighter pb-2 leading-[1.1] whitespace-nowrap"
               style={{ fontSize: "clamp(2.8rem, 13vw, 7.2rem)", fontWeight: 500, marginTop: "-0.02em" }}
             >
               <span className="shimmer-text-lumensky god-text-shadow">
@@ -222,12 +212,12 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           </h1>
 
           {/* Subtext */}
-          <p className="stagger-god-3 text-[#71717a] text-[15px] sm:text-[17px] md:text-[20px] leading-relaxed max-w-[500px] mx-auto mb-14 px-4 font-sans font-normal tracking-wide">
+          <p className="text-[#71717a] text-[15px] sm:text-[17px] md:text-[20px] leading-relaxed max-w-[500px] mx-auto mb-14 px-4 font-sans font-normal tracking-wide">
             A strategist and executioner that converts your ambition into raw, immutable daily action. No fluff. No excuses. No mercy.
           </p>
 
           {/* Centered CTA Row */}
-          <div className="stagger-god-4 flex justify-center w-full relative">
+          <div className="flex justify-center w-full relative">
             <div className="btn-eclipse-glow"></div>
             <button className="btn-obsidian group" onClick={handleStart} style={{ zIndex: 10 }}>
               <span>Get started</span>
