@@ -50,74 +50,69 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
         style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}
       />
 
-      {/* ── The Breathing Eclipse (Center Bottom) ── */}
-      <div className="absolute bottom-[-15vh] left-1/2 -translate-x-1/2 w-[150vw] md:w-[100vw] h-[60vh] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.035)_0%,rgba(0,0,0,0)_60%)] pointer-events-none z-0 animate-eclipse-breathe" />
-
       {/* Standard React CSS Injector */}
       <style>{`
         .lp-root {
           background-color: #000000 !important;
         }
 
-        @keyframes eclipseBreathe {
-          0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
-          50% { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
-        }
-        .animate-eclipse-breathe {
-          animation: eclipseBreathe 8s ease-in-out infinite;
-        }
-
-        /* Obsidian Glass Pill CTA */
-        .btn-obsidian {
+        /* White Glass Pill CTA */
+        .btn-white-pill {
           position: relative;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 12px;
-          padding: 18px 48px;
+          gap: 10px;
+          padding: 16px 42px;
           border-radius: 9999px;
-          background: rgba(20, 20, 20, 0.4);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          color: #ffffff;
+          background: #ffffff;
+          color: #000000;
           font-family: 'Inter', sans-serif;
-          font-weight: 500;
-          font-size: 17px;
-          letter-spacing: 0.03em;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          font-weight: 600;
+          font-size: 16px;
+          letter-spacing: 0.01em;
+          border: 1px solid #ffffff;
           box-shadow: 
-            inset 0 1px 1px rgba(255, 255, 255, 0.15), /* Inner top highlight */
-            inset 0 -1px 1px rgba(0, 0, 0, 0.5), /* Inner bottom shadow */
-            0 15px 35px rgba(0, 0, 0, 0.5), /* Drop shadow */
-            0 0 20px rgba(255, 255, 255, 0.02); /* Ambient glow */
+            0 0 15px rgba(255, 255, 255, 0.5), /* Sharp inner glow */
+            0 10px 40px rgba(255, 255, 255, 0.3), /* Wide ambient glow */
+            inset 0 -2px 4px rgba(0, 0, 0, 0.1); /* Inner depth */
           cursor: pointer;
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s ease;
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
           z-index: 10;
         }
 
-        .btn-obsidian::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 9999px;
-          box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
-          opacity: 0;
-          transition: opacity 0.4s ease;
+        .btn-white-pill:active {
+          transform: scale(0.95);
+          box-shadow: 0 0 10px rgba(255, 255, 255, 0.4), 0 5px 20px rgba(255, 255, 255, 0.2);
         }
 
-        .btn-obsidian:active {
-          transform: scale(0.94);
-          background: rgba(30, 30, 30, 0.6);
+        .btn-white-pill .arrow-icon {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          color: #000000;
         }
-        .btn-obsidian:active::after {
-          opacity: 1;
-        }
-
-        .btn-obsidian .arrow-icon {
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .btn-obsidian:active .arrow-icon {
+        .btn-white-pill:active .arrow-icon {
           transform: translateX(4px);
+        }
+
+        .btn-white-pill-sm {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 10px 24px;
+          border-radius: 9999px;
+          background: #ffffff;
+          color: #000000;
+          font-family: 'Inter', sans-serif;
+          font-weight: 600;
+          font-size: 14px;
+          border: 1px solid #ffffff;
+          box-shadow: 0 0 10px rgba(255, 255, 255, 0.4), 0 6px 20px rgba(255, 255, 255, 0.2);
+          cursor: pointer;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-white-pill-sm:active {
+          transform: scale(0.95);
         }
 
         /* Ghost Auth Buttons */
@@ -126,7 +121,7 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           color: #888888;
           font-size: 14px;
           font-weight: 500;
-          padding: 8px 16px;
+          padding: 10px 16px;
           border-radius: 9999px;
           transition: color 0.3s ease, background 0.3s ease;
         }
@@ -151,31 +146,16 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           0%  { background-position: -200% 0; }
           to  { background-position:  200% 0; }
         }
-
-        .btn-eclipse-glow {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 140px;
-          height: 60px;
-          background: rgba(255, 255, 255, 0.15);
-          filter: blur(25px);
-          border-radius: 50%;
-          pointer-events: none;
-          z-index: 1;
-        }
       `}</style>
 
-      {/* ── Header (Ultra Minimal) ── */}
+      {/* ── Header (Flow-based alignment) ── */}
       <header 
-        className="flex items-center justify-end px-6 py-6 relative z-10 w-full transition-opacity duration-700"
+        className="flex items-center justify-end px-6 py-6 relative z-20 w-full transition-opacity duration-700"
         style={{ opacity: visible && !isExiting ? 1 : 0 }}
       >
-        <div className="flex items-center gap-1">
-          <button onClick={() => { setAuthMode("signup"); setIsAuthOpen(true); }} className="btn-ghost-auth">Sign in</button>
-          <div className="w-1 h-1 rounded-full bg-[#333]"></div>
-          <button onClick={() => { setAuthMode("login"); setIsAuthOpen(true); }} className="btn-ghost-auth">Log in</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setAuthMode("signup"); setIsAuthOpen(true); }} className="btn-ghost-auth">Sign up</button>
+          <button onClick={() => { setAuthMode("login"); setIsAuthOpen(true); }} className="btn-white-pill-sm">Log in</button>
         </div>
       </header>
 
@@ -191,19 +171,19 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           }}
         >
           {/* Headline */}
-          <h1 className="font-display mb-8 flex flex-col items-center">
+          <h1 className="font-display mb-8 flex flex-col items-center w-full max-w-[100vw] overflow-hidden px-2">
             {/* First Line */}
             <div 
-              className="tracking-tight pb-1 text-[#a1a1aa] leading-[1.0] whitespace-nowrap"
-              style={{ fontSize: "clamp(2.0rem, 10vw, 5.0rem)", fontWeight: 400 }}
+              className="tracking-tight pb-1 text-[#a1a1aa] leading-[1.0]"
+              style={{ fontSize: "clamp(1.7rem, 7.5vw, 5.0rem)", fontWeight: 400 }}
             >
               Stop planning.
             </div>
             
             {/* Second Line */}
             <div 
-              className="tracking-tighter pb-2 leading-[1.1] whitespace-nowrap"
-              style={{ fontSize: "clamp(2.8rem, 13vw, 7.2rem)", fontWeight: 500, marginTop: "-0.02em" }}
+              className="tracking-tighter pb-2 leading-[1.1]"
+              style={{ fontSize: "clamp(2.2rem, 9.5vw, 7.2rem)", fontWeight: 500, marginTop: "-0.02em" }}
             >
               <span className="shimmer-text-lumensky god-text-shadow">
                 Start executing.
@@ -219,10 +199,9 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
 
           {/* Centered CTA Row */}
           <div className="flex justify-center w-full relative">
-            <div className="btn-eclipse-glow"></div>
-            <button className="btn-obsidian group" onClick={handleStart} style={{ zIndex: 10 }}>
+            <button className="btn-white-pill group" onClick={handleStart}>
               <span>Get started</span>
-              <ArrowRight size={20} className="arrow-icon text-white/70 group-active:text-white" />
+              <ArrowRight size={20} className="arrow-icon" />
             </button>
           </div>
         </div>
