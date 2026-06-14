@@ -212,10 +212,9 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
           </h1>
 
           {/* Subtext */}
-          <p className="text-[#a1a1aa] text-[14px] sm:text-[16px] leading-snug max-w-[85%] sm:max-w-md mx-auto mb-12 font-sans font-normal opacity-90">
-            A strategist and executioner that converts your ambition into raw, immutable daily action.
-            <br className="hidden sm:block" />
-            <span className="block mt-2 text-white/60 font-medium">No fluff. No excuses. No mercy.</span>
+          <p className="text-[#a1a1aa] text-[15px] sm:text-[17px] leading-snug max-w-[90%] sm:max-w-md mx-auto mb-10 font-sans font-normal opacity-90">
+            Turn ambition into raw, immutable action.<br />
+            <span className="text-white/70 font-medium">No fluff. No excuses. No mercy.</span>
           </p>
 
           {/* Centered CTA Row */}
