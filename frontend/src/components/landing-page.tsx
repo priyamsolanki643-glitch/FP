@@ -212,10 +212,12 @@ export function LandingPage({ onLock, hasSession }: LandingPageProps) {
             
             {/* Second Line */}
             <div 
-              className="stagger-god-2 shimmer-text-lumensky god-text-shadow tracking-tighter pb-2 leading-[1.1] whitespace-nowrap"
+              className="stagger-god-2 tracking-tighter pb-2 leading-[1.1] whitespace-nowrap"
               style={{ fontSize: "clamp(2.8rem, 13vw, 7.2rem)", fontWeight: 500, marginTop: "-0.02em" }}
             >
-              Start executing.
+              <span className="shimmer-text-lumensky god-text-shadow">
+                Start executing.
+              </span>
             </div>
           </h1>
 
