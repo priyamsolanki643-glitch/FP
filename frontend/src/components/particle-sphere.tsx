@@ -73,7 +73,7 @@ export function ParticleSphere() {
 
       projected.forEach(p => {
         // Project 3D to 2D
-        const perspective = 400;
+        const perspective = radius * 3; // Keep camera far enough to avoid warping
         const scale = perspective / (perspective + p.z * radius);
         const x2D = width / 2 + p.x * radius * scale;
         const y2D = height / 2 + p.y * radius * scale;
@@ -114,10 +114,6 @@ export function ParticleSphere() {
     <canvas 
       ref={canvasRef} 
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150vw] h-[150vw] max-w-[900px] max-h-[900px] pointer-events-none z-0"
-      style={{
-        maskImage: 'radial-gradient(circle at center, black 40%, transparent 70%)',
-        WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 70%)',
-      }}
     />
   );
 }
