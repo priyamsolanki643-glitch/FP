@@ -587,8 +587,8 @@ DO NOT talk about anything else or provide any strategy until they provide this 
         let fullText = '';
         try {
           for await (const chunk of smartResponse.stream) {
-            // Use the getter chunk.text instead of chunk.text() in @google/genai
-            const chunkText = chunk.text || '';
+            // Use safe handling for both chunk.text function and getter across SDK versions
+            const chunkText = (typeof chunk.text === 'function' ? chunk.text() : chunk.text) || '';
             fullText += chunkText;
             
             // Artificial typing delay for natural UX
