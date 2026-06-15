@@ -158,12 +158,13 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
 
       await DbService.saveMessage(currentThreadId, actualUserId, 'fp', responseText);
 
-      return c.json({
-        status: 'success',
-        data: {
-          engine_result: { type: 'chat_response', data: {} },
-          ai_response: { response_text: responseText },
-          thread_id: currentThreadId
+      return streamSSE(c, async (stream) => {
+        const words = responseText.split(' ');
+        for (let i = 0; i < words.length; i++) {
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
+          });
+          await new Promise(r => setTimeout(r, 40));
         }
       });
     }
@@ -233,19 +234,17 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
         extraction = await LLMService.extractOnboardingData(currentHistory);
       } catch (err: any) {
         console.error('ONBOARDING_EXTRACTION_ERROR:', getAIErrorMessage(err));
-
-        return c.json(
-          {
-            status: 'success',
-            data: {
-              engine_result: { type: 'chat_response', data: {} },
-              ai_response: {
-                response_text: toUserSafeAIText(err)
-              }
-            }
-          },
-          200
-        );
+        const safeText = toUserSafeAIText(err);
+        
+        return streamSSE(c, async (stream) => {
+          const words = safeText.split(' ');
+          for (let i = 0; i < words.length; i++) {
+            await stream.writeSSE({
+              data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
+            });
+            await new Promise(r => setTimeout(r, 40));
+          }
+        });
       }
       
       if (extraction.isComplete) {
@@ -466,12 +465,13 @@ DO NOT talk about anything else or provide any strategy until they provide this 
         
         await DbService.saveMessage(currentThreadId, actualUserId, 'fp', smartResponse.response_text);
         
-        return c.json({
-          status: 'success',
-          data: {
-            engine_result: { type: 'chat_response', data: {} },
-            ai_response: { response_text: smartResponse.response_text },
-            thread_id: currentThreadId
+        return streamSSE(c, async (stream) => {
+          const words = smartResponse.response_text.split(' ');
+          for (let i = 0; i < words.length; i++) {
+            await stream.writeSSE({
+              data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
+            });
+            await new Promise(r => setTimeout(r, 40));
           }
         });
       }
@@ -731,18 +731,15 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
 
     console.error('INTERACTION_MESSAGE_FATAL:', getAIErrorMessage(err));
 
-    return c.json(
-      {
-        status: 'success',
-        data: {
-          engine_result: { type: 'chat_response', data: {} },
-          ai_response: {
-            response_text: safeText
-          }
-        }
-      },
-      200
-    );
+    return streamSSE(c, async (stream) => {
+      const words = safeText.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        await stream.writeSSE({
+          data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
+        });
+        await new Promise(r => setTimeout(r, 40));
+      }
+    });
   }
 });
 
