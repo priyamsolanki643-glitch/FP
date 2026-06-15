@@ -76,8 +76,8 @@ export async function executeWithRotation(
   let attempt = 0;
 
   // We define a fallback chain of models to multiply our quota effectively per key.
-  const fallbackModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-  const requestedModel = payload.model || 'gemini-2.5-flash';
+  const fallbackModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const requestedModel = payload.model || 'gemini-3.1-flash-lite';
   const modelsToTry = Array.from(new Set([requestedModel, ...fallbackModels]));
 
   let totalCombinations = keys.length * modelsToTry.length;
@@ -155,8 +155,15 @@ async function executeWithRotationStream(
 
   if (keys.length === 0) throw new Error('No API keys configured');
 
-  const actualModel = fallbackToDefault ? 'gemini-2.5-flash' : (payload.model || 'gemini-2.5-flash');
-  const maxRetries = Math.max(3, keys.length);
+  // We define a fallback chain of models to multiply our quota effectively per key.
+  const fallbackModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const requestedModel = fallbackToDefault ? 'gemini-3.1-flash-lite' : (payload.model || 'gemini-3.1-flash-lite');
+  const modelsToTry = Array.from(new Set([requestedModel, ...fallbackModels]));
+
+  let maxRetries = Math.max(3, keys.length);
+  let totalCombinations = keys.length * modelsToTry.length;
+  if (maxRetries < totalCombinations) maxRetries = totalCombinations;
+
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const getErrorMessage = (err: any) => err?.message || err?.toString() || '';
@@ -180,10 +187,12 @@ async function executeWithRotationStream(
   let attempt = 0;
 
   while (attempt < maxRetries) {
-    const keyIndex = attempt % keys.length;
+    const keyIndex = Math.floor(attempt / modelsToTry.length) % keys.length;
+    const mIndex = attempt % modelsToTry.length;
     attempt++;
 
     const key = keys[keyIndex];
+    const actualModel = modelsToTry[mIndex];
     const cooldownId = `${actualModel}-${keyIndex}`;
 
     const cooldownUntil = globalCooldownMap.get(cooldownId);
@@ -204,20 +213,24 @@ async function executeWithRotationStream(
     } catch (err: any) {
       lastError = err;
       const message = getErrorMessage(err);
+      console.warn(`[LLM Stream] Failed | attempt=${attempt} | model=${actualModel} | key=${keyIndex + 1} | error=${message}`);
 
       if (isModelError(message)) {
-        break;
+        console.warn(`[LLM Stream] Invalid model: ${actualModel}, trying next model`);
+        continue;
       }
 
       if (isQuotaError(message)) {
         const retryDelay = parseRetryDelayMs(message) ?? 60_000;
         globalCooldownMap.set(cooldownId, Date.now() + retryDelay);
+        console.warn(`[LLM Stream] Quota hit key=${keyIndex + 1} for model=${actualModel}. Cooldown ${retryDelay}ms. Trying next fallback model.`);
         continue;
       }
 
       if (isRetryableInfraError(message)) {
         const backoff = Math.min(1500 * attempt, 8000);
         await sleep(backoff);
+        attempt--; // retry the EXACT same model and key combination
         continue;
       }
 
@@ -402,7 +415,7 @@ export class LLMService {
 
     try {
       const response = await executeWithRotation({
-        model: modelName || 'gemini-2.5-flash',
+        model: modelName || 'gemini-3.1-flash-lite',
         contents: safeContents as any,
         config: {
           systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
