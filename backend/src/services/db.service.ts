@@ -203,8 +203,6 @@ export class DbService {
   }
 
   static async getActiveMission(userId: string): Promise<any | null> {
-    if (userId.startsWith('anon_')) return null;
-
     if (isLocalFallback) {
       const data = readLocalDb();
       return data.missions.find((m) => m.user_id === userId) || null;
