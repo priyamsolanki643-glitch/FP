@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import {
@@ -97,7 +98,7 @@ const messageSchema = z.object({
 });
 
 // Primary chat/onboarding interaction message handler
-interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) => {
+interactionRoutes.post('/message/stream', zValidator('json', messageSchema), async (c) => {
   const { user_id, message, conversationHistory, state_context, action, thread_id, model } = c.req.valid('json');
   const actualUserId = c.get('userId');
   const userLanguage = c.get('userLanguage') || 'Hinglish';
@@ -220,7 +221,7 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
         tasksCompletedToDate: activeMission.tasksCompleted || Math.floor(activeMission.consistencyScore / 10),
         tasksAttemptedToDate: activeMission.tasksAttempted || (Math.floor(activeMission.consistencyScore / 10) + (activeMission.consecutiveFailureCount || 0)),
         consecutiveFailureCount: activeMission.consecutiveFailureCount || 0,
-      }, userLanguage);
+      });
 
       systemPrompt = critiqueResult.systemPrompt;
       result = { type: 'critique_response', data: critiqueResult };
@@ -528,8 +529,13 @@ DO NOT talk about anything else or provide any strategy until they provide this 
 
     // Call LLM with the OmniPipeline-generated system prompt
     // Gemini receives only the translation directive. All thinking is already done.
-    let llmResponse = { response_text: "System prompt generated, awaiting LLM..." };
-    if (finalSystemPrompt) {
+    return streamSSE(c, async (stream) => {
+      await stream.writeSSE({
+        data: JSON.stringify({ type: 'metadata', data: { engine_result: result, thread_id: currentThreadId } })
+      });
+
+      let llmResponse = { response_text: "System prompt generated, awaiting LLM..." };
+      if (finalSystemPrompt) {
       // Enrich with cohort memory (if any — already injected via OmniContext.recentMemories)
       const legacyMemText = (!state_context?.contextMatrix && similarMemories && similarMemories.length > 0)
         ? "\n\n## COHORT INTELLIGENCE:\n" +
@@ -541,37 +547,34 @@ DO NOT talk about anything else or provide any strategy until they provide this 
           ? "If user explicitly logs a task completion/failure, set task_classification to 'completed' or 'failed'. Analyze their message for hesitation words ('but', 'maybe', 'try') to detect dropout risk."
           : "Guide user naturally through goal discovery. When data is sufficient, present simulated paths.");
 
-      let smartResponse;
-      try {
-        smartResponse = await LLMService.generateSmartResponse(
-          actualUserId,
-          enrichedPrompt,
-          [...conversationHistory, { role: 'user', parts: [{ text: message }] }] as any,
-          !activeMission,
-          model
-        );
-      } catch (err: any) {
-        console.error('SMART_RESPONSE_ERROR:', getAIErrorMessage(err));
+        let smartResponse;
+        try {
+          smartResponse = await LLMService.generateSmartResponseStream(
+            actualUserId,
+            enrichedPrompt,
+            [...conversationHistory, { role: 'user', parts: [{ text: message }] }] as any,
+            !activeMission,
+            model
+          );
+        } catch (err: any) {
+          console.error('SMART_RESPONSE_ERROR:', getAIErrorMessage(err));
+          const safeText = toUserSafeAIText(err);
+          await DbService.saveMessage(currentThreadId, actualUserId, 'fp', safeText);
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'text', text: safeText })
+          });
+          return;
+        }
 
-        const safeText = toUserSafeAIText(err);
-
-        await DbService.saveMessage(currentThreadId, actualUserId, 'fp', safeText);
-
-        return c.json(
-          {
-            status: 'success',
-            data: {
-              engine_result: result,
-              ai_response: {
-                response_text: safeText
-              }
-            }
-          },
-          200
-        );
-      }
-
-      llmResponse.response_text = smartResponse.response_text;
+        let fullText = '';
+        for await (const chunk of smartResponse.stream) {
+          const chunkText = chunk.text();
+          fullText += chunkText;
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'text', text: chunkText })
+          });
+        }
+        llmResponse.response_text = fullText;
 
       // 1. Handle Task Outcome Logging
       if (activeMission && !isTransitioningToExecution && smartResponse.task_classification && smartResponse.task_classification !== 'none') {
@@ -619,21 +622,23 @@ DO NOT talk about anything else or provide any strategy until they provide this 
 
         if (!auditReport.passedLegalGate) {
           console.warn(`LEGAL_AUDIT: Critique response blocked due to compliance violation.`);
-          return c.json({
-            status: 'success',
-            data: {
-              engine_result: result,
-              ai_response: {
-                response_text: auditReport.requiredDisclaimers.join('\n\n') || "Response blocked due to legal compliance checks."
-              }
-            }
+          const disclaimerText = auditReport.requiredDisclaimers.join('\n\n') || "Response blocked due to legal compliance checks.";
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'disclaimer', text: `\n\n**System Audit**: ${disclaimerText}` })
+          });
+          llmResponse.response_text += `\n\n**System Audit**: ${disclaimerText}`;
+        } else if (auditReport.requiredDisclaimers && auditReport.requiredDisclaimers.length > 0) {
+          const extra = "\n\n---\n*Disclaimer: " + auditReport.requiredDisclaimers.join(' | ') + "*";
+          llmResponse.response_text += extra;
+          await stream.writeSSE({
+            data: JSON.stringify({ type: 'disclaimer', text: extra })
           });
         }
-
-        if (auditReport.requiredDisclaimers && auditReport.requiredDisclaimers.length > 0) {
-          llmResponse.response_text += "\n\n---\n*Disclaimer: " + auditReport.requiredDisclaimers.join(' | ') + "*";
-        }
       }
+    } else {
+      await stream.writeSSE({
+        data: JSON.stringify({ type: 'text', text: llmResponse.response_text })
+      });
     }
 
     // Save AI response
@@ -704,13 +709,6 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
       });
     }
 
-    return c.json({
-      status: 'success',
-      data: {
-        engine_result: result,
-        ai_response: llmResponse,
-        thread_id: currentThreadId
-      }
     });
 
   } catch (err: any) {

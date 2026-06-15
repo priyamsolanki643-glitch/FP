@@ -200,7 +200,7 @@ export function processOperatorCritique(input: {
     return {
       responseType: 'dopamine_loop_interrupt',
       engineResponse: `Tu phir se execution chhod kar planning aur theories me lag gaya hai. Ye dopamine seeking behavior tera time waste kar raha hai. Abhi focus is task par rakh: "${userRuntime.currentTaskSprint?.tasks[0]?.title || 'Daily sprint task'}". Ise complete kar, uske baad baatein karenge.`,
-      systemPrompt: buildFullSystemPrompt('critique', userRuntime, userLanguage),
+      systemPrompt: buildFullSystemPrompt('critique', userRuntime),
       consistencyDelta: 0,
       dopamineLoopDetected: true,
     };
@@ -223,7 +223,7 @@ export function processOperatorCritique(input: {
         responseType: 'state_lock_enforcement',
         engineResponse: `State Lock active hai. Strategy abhi aise hi randomly change nahi hogi. 
 Agar tujhe sach me koi genuine blocker (technical issue ya external dependency) aa raha hai, toh specific reason bata. Varna pehle execution track record build kar. Bina action ke path badalna sirf aalas hai. Back to work.`,
-        systemPrompt: buildFullSystemPrompt('critique', userRuntime, userLanguage),
+        systemPrompt: buildFullSystemPrompt('critique', userRuntime),
         consistencyDelta: 0,
         dopamineLoopDetected: false,
       };

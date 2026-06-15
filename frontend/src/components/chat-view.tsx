@@ -286,7 +286,7 @@ export function ChatView({ onOpenSidebar, onOpenVault, onOpenFocusMode, isAnonym
 const { data: { session } } = await supabase.auth.getSession();
       const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/$/, "");
 
-      const res = await fetch(`${baseUrl}/api/v1/interaction/message`, {
+      const res = await fetch(`${baseUrl}/api/v1/interaction/message/stream`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -299,41 +299,85 @@ const { data: { session } } = await supabase.auth.getSession();
           thread_id: threadId
         }),
       });
-      const data = await res.json();
-      
-      if (data?.data?.thread_id && !threadId) {
-        setThreadId(data.data.thread_id);
-        // Let sidebar know to refresh its list
-        window.dispatchEvent(new Event('refresh-sidebar'));
+
+      if (!res.ok || !res.body) {
+        throw new Error("Network response was not ok");
       }
 
-      let reply = "Parameter logged.";
-      if (data?.error) {
-        let rawError = "";
-        try { 
-          if (typeof data.error === 'object') {
-            rawError = data.error.message || JSON.stringify(data.error);
-          } else {
-            rawError = JSON.parse(data.error)?.error?.message ?? data.error; 
+      // Check if the response is JSON (e.g. error or non-streaming fallback)
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        // handle JSON exactly as before
+        if (data?.data?.thread_id && !threadId) {
+          setThreadId(data.data.thread_id);
+          window.dispatchEvent(new Event('refresh-sidebar'));
+        }
+        let reply = "Parameter logged.";
+        if (data?.error) {
+          reply = "System Notification: A brief network anomaly occurred. Please re-transmit your parameter.";
+        } else if (data?.data?.ai_response?.response_text) {
+          reply = data.data.ai_response.response_text;
+        }
+        if (data?.data?.engine_result?.type === "onboarding_complete") {
+          setSimulationData(data.data.engine_result.data);
+        }
+        setMessages((prev) => [...prev, { id: String(Date.now()), role: "fp", text: reply }]);
+      } else {
+        // SSE STREAMING MODE
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let done = false;
+        
+        let accumulatedReply = "";
+        let newMsgId = String(Date.now());
+        
+        // Push an empty message first
+        setMessages((prev) => [...prev, { id: newMsgId, role: "fp", text: "" }]);
+        setIsThinking(false);
+
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          if (value) {
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const dataStr = line.replace("data: ", "");
+                if (dataStr === "[DONE]") {
+                  done = true;
+                  break;
+                }
+                try {
+                  const eventData = JSON.parse(dataStr);
+                  
+                  if (eventData.type === "metadata") {
+                    if (eventData.data?.thread_id && !threadId) {
+                      setThreadId(eventData.data.thread_id);
+                      window.dispatchEvent(new Event('refresh-sidebar'));
+                    }
+                    if (eventData.data?.engine_result?.type === "onboarding_complete") {
+                      setSimulationData(eventData.data.engine_result.data);
+                    }
+                  } else if (eventData.type === "text" || eventData.type === "disclaimer") {
+                    if (eventData.text) {
+                      accumulatedReply += eventData.text;
+                      // Update the specific message
+                      setMessages((prev) => 
+                        prev.map((m) => m.id === newMsgId ? { ...m, text: accumulatedReply } : m)
+                      );
+                      scrollToBottom();
+                    }
+                  }
+                } catch (e) {
+                  // Partial JSON chunk parsing error, ignore
+                }
+              }
+            }
           }
         }
-        catch { rawError = data.error; }
-
-        const errStr = rawError.toLowerCase();
-        if (errStr.includes("quota") || errStr.includes("rate limit") || errStr.includes("429") || errStr.includes("exceeded")) {
-          reply = "Lumensky Engine is currently processing peak tactical data. Please allow a brief 30-second cooldown before transmitting the next parameter.";
-        } else {
-          reply = "System Notification: A brief network anomaly occurred. Please re-transmit your parameter.";
-        }
-      } else if (data?.data?.ai_response?.response_text) {
-        reply = data.data.ai_response.response_text;
       }
-
-      if (data?.data?.engine_result?.type === "onboarding_complete") {
-        setSimulationData(data.data.engine_result.data);
-      }
-
-      setMessages((prev) => [...prev, { id: String(Date.now()), role: "fp", text: reply }]);
     } catch (err: any) {
       console.error("CRITICAL FETCH ERROR:", err);
       setMessages((prev) => [

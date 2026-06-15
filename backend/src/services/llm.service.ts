@@ -128,6 +128,95 @@ export async function executeWithRotation(
   throw lastError || new Error('All configured AI API keys are currently in cooldown (resource_exhausted). Please retry in a minute.');
 }
 
+async function executeWithRotationStream(
+  payload: any,
+  fallbackToDefault: boolean = true
+): Promise<any> {
+  const keys = [
+    ...(process.env.AI_KEYS ? process.env.AI_KEYS.split(',') : []),
+    ...(process.env.GEMINI_KEYS ? process.env.GEMINI_KEYS.split(',') : []),
+    ...(process.env.AI_PROVIDER_KEY ? process.env.AI_PROVIDER_KEY.split(',') : []),
+    ...(process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.split(',') : []),
+    ...(process.env.GOOGLE_API_KEY ? process.env.GOOGLE_API_KEY.split(',') : []),
+    ...HARDCODED_KEYS
+  ].map(k => k?.trim()).filter(Boolean) as string[];
+
+  if (keys.length === 0) throw new Error('No API keys configured');
+
+  const actualModel = fallbackToDefault ? 'gemini-2.5-flash' : (payload.model || 'gemini-2.5-flash');
+  const maxRetries = Math.max(3, keys.length);
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const getErrorMessage = (err: any) => err?.message || err?.toString() || '';
+  const isModelError = (message: string) => message.includes('404') || message.includes('models/') || message.includes('not found');
+  const isQuotaError = (message: string) => message.includes('429') || message.includes('quota') || message.includes('resource_exhausted');
+  
+  const parseRetryDelayMs = (message: string): number | null => {
+    const match = message.match(/retry in (\d+)s/i);
+    return match ? parseInt(match[1]) * 1000 : null;
+  };
+
+  const isRetryableInfraError = (message: string): boolean => {
+    const m = message.toLowerCase();
+    return m.includes('503') || m.includes('overloaded') || m.includes('unavailable') ||
+      m.includes('internal error') || m.includes('deadline exceeded') ||
+      m.includes('timed out') || m.includes('timeout') ||
+      m.includes('econnreset') || m.includes('socket hang up');
+  };
+
+  let lastError: any = null;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    const keyIndex = attempt % keys.length;
+    attempt++;
+
+    const key = keys[keyIndex];
+    const cooldownId = `${actualModel}-${keyIndex}`;
+
+    const cooldownUntil = globalCooldownMap.get(cooldownId);
+    if (cooldownUntil && Date.now() < cooldownUntil) {
+      continue;
+    }
+
+    const client = new GoogleGenAI({ apiKey: key });
+
+    try {
+      const attemptPayload = { ...payload, model: actualModel };
+      // Note: the stream isn't "complete" until the client consumes it, 
+      // but returning the stream object means the API call succeeded in opening the stream.
+      const resultStream = await client.models.generateContentStream(attemptPayload as any);
+      globalCooldownMap.delete(cooldownId);
+      return resultStream;
+
+    } catch (err: any) {
+      lastError = err;
+      const message = getErrorMessage(err);
+
+      if (isModelError(message)) {
+        break;
+      }
+
+      if (isQuotaError(message)) {
+        const retryDelay = parseRetryDelayMs(message) ?? 60_000;
+        globalCooldownMap.set(cooldownId, Date.now() + retryDelay);
+        continue;
+      }
+
+      if (isRetryableInfraError(message)) {
+        const backoff = Math.min(1500 * attempt, 8000);
+        await sleep(backoff);
+        continue;
+      }
+
+      await sleep(400);
+    }
+  }
+
+  throw lastError || new Error('All configured AI API keys are currently in cooldown (resource_exhausted). Please retry in a minute.');
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SAFE JSON BUILDER — constructs a safe, Gemini-parseable contents array
 // Rules:
@@ -233,6 +322,45 @@ export class LLMService {
   // Uses plain-text mode (NOT JSON mode) for maximum reliability.
   // JSON mode has too many constraints that cause 400 errors in production.
   // ──────────────────────────────────────────────────────────────────────────
+  static async generateSmartResponseStream(
+    userId: string,
+    systemPrompt: string,
+    conversationHistory: { role: 'user' | 'model'; parts: { text: string }[] }[] = [],
+    isModeOnboarding: boolean,
+    modelName?: string
+  ): Promise<any> {
+    const MAX_HISTORY = 10;
+    const rawHistory = conversationHistory.length > MAX_HISTORY
+      ? conversationHistory.slice(-MAX_HISTORY)
+      : conversationHistory;
+
+    const safeContents = buildSafeContents(rawHistory);
+    const cleanSystemInstruction = stripMarkdownForSystemInstruction(systemPrompt);
+
+    const stream = await executeWithRotationStream({
+      model: modelName || 'gemini-2.5-flash',
+      contents: safeContents as any,
+      config: {
+        systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
+        temperature: 0.9,
+        maxOutputTokens: 4096,
+      }
+    });
+
+    const lastUserTurn = [...conversationHistory].reverse().find(t => t.role === 'user');
+    const lastUserMsg = lastUserTurn?.parts?.map(p => p.text).join(' ') || '';
+    const msg = lastUserMsg.toLowerCase();
+    let task_classification: 'completed' | 'failed' | 'none' = 'none';
+
+    if (/\b(done|kiya|kar liya|complete|finish|ho gaya|completed|submitted|sent|bana liya|dekh liya|call kiya|gaya tha|gaye|aa gaya)\b/i.test(msg)) {
+      task_classification = 'completed';
+    } else if (/\b(fail|nahi|nhi|miss|skip|chuk|couldn't|could not|na ho|ho nahi|kar nahi|nahi kar|nahi ho|blocked)\b/i.test(msg)) {
+      task_classification = 'failed';
+    }
+
+    return { stream, task_classification };
+  }
+
   static async generateSmartResponse(
     userId: string,
     systemPrompt: string,
