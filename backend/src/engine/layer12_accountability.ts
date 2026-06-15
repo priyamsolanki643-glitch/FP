@@ -504,21 +504,18 @@ export function detectDopamineLoop(userMessage: string): {
     };
   }
 
-  if (dopamineSignalCount > 0) {
+  if (dopamineSignalCount > 2) { // Requires at least 3 signals
     return {
       isDopamineLoop: true,
       isExecution: false,
-      confidence: Math.min(1.0, dopamineSignalCount / 3),
-      response: `Ek baat bataa, is sawal ko puchne se pehle:
+      confidence: Math.min(1.0, dopamineSignalCount / 4),
+      response: `Ek baat dhyan rakh:
 
-Tune apna aaj ka assigned task complete kiya hai?
+Planning aur naye ideas tabhi kaam aate hain jab unke piche execution ho. Tere messages se lag raha hai ki tu action lene ki jagah overthink kar raha hai.
 
-Agar haan — toh task completion log kar aur phir sawal puch. Main log ke baad jawab dunga.
-Agar nahi — toh ye jo tu sawal puch rha hai, ye sirf productive procrastination hai. Tu dimaag chalane ka validation chahta hai bina actually execute kiye.
+Kya tune aaj ka main task shuru kiya hai? Agar haan, to uski progress bata. Agar nahi, to abhi ye sab rok aur pehle execution pe lag ja. Badi baatein baad me karenge, pehle action le.
 
-Mujhse baatein karne se tera goal complete nahi hoga. Mera kaam tujhe motivate karna nahi, tujhse kaam karwana hai.
-
-Task completion status kya hai: [yes/no]?`,
+Task status kya hai?`,
     };
   }
 
@@ -541,7 +538,7 @@ export function generateRealityCheck(
   consistencyScore: number,
   egoLeveragePoint: EgoLeveragePoint,
 ): string {
-  if (consecutiveFailureCount >= 3 && consistencyScore < 50) {
+  if (consecutiveFailureCount >= 5 && consistencyScore < 50) {
     return `Bhai, ab ek seedhi aur sachhi baat karte hain.
 
 Tere continuous ${consecutiveFailureCount} failures ho chuke hain aur tera consistency score sirf ${consistencyScore}/100 bacha hai.
@@ -561,7 +558,7 @@ Abhi tu kya choose kar rha hai? Awaiting your clear response:
 [C] Mujhe reset karna hai. Main koi aisa goal select karunga jiske liye main elite sacrifice ke liye ready hun.`;
   }
 
-  if (consecutiveFailureCount >= 2) {
+  if (consecutiveFailureCount >= 3) {
     return `Back-to-back 2 din failure. Pattern shuru ho rha hai tera.
 
 Tere kaam rokne se strategy nahi rukti, bas progress rukti hai.

@@ -106,6 +106,21 @@ app.route('/api/v1/interaction', interactionRoutes);
 app.route('/api/v1/auth', authRoutes);
 app.route('/api/v1/threads', threadRoutes);
 
+// B2B CMO Dashboard Endpoint for PW Pitch (Real Aggregation)
+app.get('/api/v1/analytics/cohort-health', async (c) => {
+  try {
+    const b2bData = await DbService.getB2bCohortAnalytics();
+    
+    return c.json({
+      status: 'success',
+      data: b2bData
+    });
+  } catch (err) {
+    console.error("Cohort Health API Error:", err);
+    return c.json({ error: "Failed to fetch cohort analytics" }, 500);
+  }
+});
+
 // Cloud Run sets PORT env var to 8080 — always read directly from process.env
 const PORT = process.env.PORT || 8080;
 

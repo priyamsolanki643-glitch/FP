@@ -217,10 +217,10 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
         userId: actualUserId,
         userRuntime: state_context || {},
         userMessage: message,
-        tasksCompletedToDate: activeMission.dayNumber,
-        tasksAttemptedToDate: activeMission.dayNumber,
-        consecutiveFailureCount: activeMission.streakDays === 0 ? 1 : 0
-      });
+        tasksCompletedToDate: activeMission.tasksCompleted || Math.floor(activeMission.consistencyScore / 10),
+        tasksAttemptedToDate: activeMission.tasksAttempted || (Math.floor(activeMission.consistencyScore / 10) + (activeMission.consecutiveFailureCount || 0)),
+        consecutiveFailureCount: activeMission.consecutiveFailureCount || 0,
+      }, userLanguage);
 
       systemPrompt = critiqueResult.systemPrompt;
       result = { type: 'critique_response', data: critiqueResult };
@@ -266,7 +266,7 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
 
           const onboardingInput = {
             userId: actualUserId,
-            age: 22,
+            age: extraction.age || 22,
             geographyTier: geographyTier as any,
             country: geoLower.includes("india") ? "India" : "United States",
             region: extraction.region || 'Unknown',
@@ -490,19 +490,19 @@ DO NOT talk about anything else or provide any strategy until they provide this 
         userLanguage: userLanguage,
         userMessage: message,
         conversationHistory: conversationHistory as any,
-        contextMatrix: state_context?.contextMatrix ?? null,
-        frictionProfile: state_context?.frictionProfile ?? null,
-        strategyState: state_context?.strategyState ?? null,
+        contextMatrix: state_context?.contextMatrix ?? activeMission?.userRuntime?.contextMatrix ?? null,
+        frictionProfile: state_context?.frictionProfile ?? activeMission?.userRuntime?.frictionProfile ?? null,
+        strategyState: state_context?.strategyState ?? activeMission?.userRuntime?.strategyState ?? null,
         detectedEmotionalSignals: [] as EmotionalSignal[],
         detectedChaosEvents: [] as ChaosEventType[],
         daysSinceLastActivity: (() => {
-          if (!state_context?.contextMatrix?.onboardingCompletedAt) return 0;
-          const onboarded = new Date(state_context.contextMatrix.onboardingCompletedAt);
+          if (!activeMission?.userRuntime?.contextMatrix?.onboardingCompletedAt) return 0;
+          const onboarded = new Date(activeMission.userRuntime.contextMatrix.onboardingCompletedAt);
           const diffTime = Math.abs(Date.now() - onboarded.getTime());
           return Math.floor(diffTime / (1000 * 60 * 60 * 24));
         })(),
         consecutiveCompletionCount: activeMission?.streakDays ?? 0,
-        consecutiveFailureCount: activeMission?.streakDays === 0 ? 1 : 0,
+        consecutiveFailureCount: activeMission?.consecutiveFailureCount ?? 0,
         daysSinceLastMilestone: activeMission?.dayNumber ?? 0,
         milestonesHitTotal: activeMission?.dayNumber ?? 0,
         streakDays: activeMission?.streakDays ?? 0,
@@ -584,11 +584,22 @@ DO NOT talk about anything else or provide any strategy until they provide this 
         if (classification === 'completed') newStreak += 1;
         else newStreak = 0;
 
+        const todayStr = new Date().toISOString().split('T')[0];
+        const hasIncrementedToday = activeMission.lastDayIncrement === todayStr;
+        let newDayNumber = activeMission.dayNumber;
+        if (!hasIncrementedToday && classification === 'completed') {
+          newDayNumber = Math.min(activeMission.totalDays, activeMission.dayNumber + 1);
+        }
+
         const updatedMission = {
           ...activeMission,
           consistencyScore: newScore,
           streakDays: newStreak,
-          dayNumber: Math.min(activeMission.totalDays, activeMission.dayNumber + 1)
+          dayNumber: newDayNumber,
+          lastDayIncrement: todayStr,
+          consecutiveFailureCount: classification === 'completed' ? 0 : (activeMission.consecutiveFailureCount || 0) + 1,
+          tasksCompleted: (activeMission.tasksCompleted || 0) + (classification === 'completed' ? 1 : 0),
+          tasksAttempted: (activeMission.tasksAttempted || 0) + 1
         };
 
         await DbService.saveMission(updatedMission);
@@ -665,6 +676,11 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
           if (extractionRes.response_text && extractionRes.response_text.trim() !== 'null') {
             const parsed = JSON.parse(extractionRes.response_text);
             if (parsed.missionName) {
+              const existingMission = await DbService.getActiveMission(actualUserId);
+              if (existingMission) {
+                console.log(`MESSAGE: Background extraction aborted because a mission already exists for ${actualUserId}.`);
+                return;
+              }
               await DbService.saveMission({
                 user_id: actualUserId,
                 missionName: parsed.missionName,
@@ -927,11 +943,22 @@ interactionRoutes.post('/log-task', async (c) => {
       newStreak = 0;
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    const hasIncrementedToday = activeMission.lastDayIncrement === todayStr;
+    let newDayNumber = activeMission.dayNumber;
+    if (!hasIncrementedToday && outcome === 'completed') {
+      newDayNumber = Math.min(activeMission.totalDays, activeMission.dayNumber + 1);
+    }
+
     const updatedMission = {
       ...activeMission,
       consistencyScore: newScore,
       streakDays: newStreak,
-      dayNumber: Math.min(activeMission.totalDays, activeMission.dayNumber + 1)
+      dayNumber: newDayNumber,
+      lastDayIncrement: todayStr,
+      consecutiveFailureCount: outcome === 'completed' ? 0 : (activeMission.consecutiveFailureCount || 0) + 1,
+      tasksCompleted: (activeMission.tasksCompleted || 0) + (outcome === 'completed' ? 1 : 0),
+      tasksAttempted: (activeMission.tasksAttempted || 0) + 1
     };
 
     await DbService.saveMission(updatedMission);
@@ -1278,17 +1305,4 @@ interactionRoutes.post('/operator/current-tasks', async (c) => {
   }
 });
 
-// B2B CMO Dashboard Endpoint for PW Pitch (Real Aggregation)
-interactionRoutes.get('/api/v1/analytics/cohort-health', async (c) => {
-  try {
-    const b2bData = await DbService.getB2bCohortAnalytics();
-    
-    return c.json({
-      status: 'success',
-      data: b2bData
-    });
-  } catch (err) {
-    console.error("Cohort Health API Error:", err);
-    return c.json({ error: "Failed to fetch cohort analytics" }, 500);
-  }
-});
+

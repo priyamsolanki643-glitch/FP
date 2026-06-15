@@ -75,8 +75,8 @@ export async function executeWithRotation(
   let lastError: any = null;
   let attempt = 0;
 
-  for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
-    if (attempt >= maxRetries) break;
+  while (attempt < maxRetries) {
+    const keyIndex = attempt % keys.length;
     attempt++;
 
     const key = keys[keyIndex];
@@ -561,6 +561,7 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
     dailyUninterruptedHours: number;
     rawSkillStrings: string[];
     pathPreference: 'high_risk_upside' | 'safe_compounding' | 'undecided';
+    age: number;
   }> {
     const SAFE_FALLBACK: {
       isComplete: boolean;
@@ -571,6 +572,7 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       dailyUninterruptedHours: number;
       rawSkillStrings: string[];
       pathPreference: 'high_risk_upside' | 'safe_compounding' | 'undecided';
+      age: number;
     } = {
       isComplete: false,
       declaredGoal: '',
@@ -578,7 +580,8 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       region: '',
       dailyUninterruptedHours: 4,
       rawSkillStrings: [] as string[],
-      pathPreference: 'undecided'
+      pathPreference: 'undecided',
+      age: 22
     };
 
     try {
@@ -590,17 +593,18 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       const prompt = `You are a data extractor for a startup strategy engine.
 Analyze this conversation and extract the user's onboarding parameters.
 
-Only set isComplete to TRUE if all 5 items are clearly present in the conversation:
+Only set isComplete to TRUE if all 6 items are clearly present in the conversation:
 1. Their specific goal (what they want to achieve)
 2. Their approximate liquid capital / financial resources
 3. Their skills (at least 1 specific skill mentioned)
 4. Their daily available hours
 5. Their approximate location / region
+6. Their approximate age
 
 Conversation:
 ${historyText}
 
-Extract parameters. If any of the 5 items are missing or vague, set isComplete to false.`;
+Extract parameters. If any of the 6 items are missing or vague, set isComplete to false.`;
 
       const responseSchema: Schema = {
         type: Type.OBJECT,
@@ -612,9 +616,10 @@ Extract parameters. If any of the 5 items are missing or vague, set isComplete t
           region: { type: Type.STRING },
           dailyUninterruptedHours: { type: Type.NUMBER },
           rawSkillStrings: { type: Type.ARRAY, items: { type: Type.STRING } },
-          pathPreference: { type: Type.STRING, enum: ['high_risk_upside', 'safe_compounding', 'undecided'] }
+          pathPreference: { type: Type.STRING, enum: ['high_risk_upside', 'safe_compounding', 'undecided'] },
+          age: { type: Type.NUMBER }
         },
-        required: ['isComplete', 'declaredGoal', 'liquidCapital', 'region', 'dailyUninterruptedHours', 'rawSkillStrings', 'pathPreference']
+        required: ['isComplete', 'declaredGoal', 'liquidCapital', 'region', 'dailyUninterruptedHours', 'rawSkillStrings', 'pathPreference', 'age']
       };
 
       const response = await executeWithRotation({
@@ -644,7 +649,8 @@ Extract parameters. If any of the 5 items are missing or vague, set isComplete t
         region: parsed.region || '',
         dailyUninterruptedHours: parsed.dailyUninterruptedHours || 4,
         rawSkillStrings: Array.isArray(parsed.rawSkillStrings) ? parsed.rawSkillStrings : [],
-        pathPreference: pathPref
+        pathPreference: pathPref,
+        age: parsed.age || 22
       };
     } catch (error) {
       console.error('[extractOnboardingData] Extraction failed (non-fatal):', error);
