@@ -13,6 +13,9 @@ const HARDCODED_KEYS: string[] = [];
 // ─────────────────────────────────────────────────────────────────────────────
 const globalCooldownMap = new Map<string, number>();
 
+// Track the global rotation state across multiple users and requests
+let globalRotationIndex = 0;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CORE EXECUTOR — smart key rotation with per-key cooldowns
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,17 +79,18 @@ export async function executeWithRotation(
   let attempt = 0;
 
   // We define a fallback chain of models to multiply our quota effectively per key.
-  const fallbackModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-  const requestedModel = payload.model || 'gemini-3.1-flash-lite';
+  const fallbackModels = ['gemini-2.0-flash-lite-preview-02-05', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const requestedModel = payload.model === 'gemini-3.1-flash-lite' ? 'gemini-2.0-flash-lite-preview-02-05' : (payload.model || 'gemini-2.0-flash-lite-preview-02-05');
   const modelsToTry = Array.from(new Set([requestedModel, ...fallbackModels]));
 
   let totalCombinations = keys.length * modelsToTry.length;
   if (maxRetries < totalCombinations) maxRetries = totalCombinations;
 
   while (attempt < maxRetries) {
-    // Try all models for a specific key before rotating to the next key
-    const keyIndex = Math.floor(attempt / modelsToTry.length) % keys.length;
-    const mIndex = attempt % modelsToTry.length;
+    // Determine the current index using the global rotation index plus the current attempt
+    const currentIndex = (globalRotationIndex + attempt) % totalCombinations;
+    const keyIndex = Math.floor(currentIndex / modelsToTry.length) % keys.length;
+    const mIndex = currentIndex % modelsToTry.length;
     attempt++;
 
     const key = keys[keyIndex];
@@ -107,6 +111,8 @@ export async function executeWithRotation(
 
       const result = await client.models.generateContent(attemptPayload as any);
       globalCooldownMap.delete(cooldownId);
+      // Advance the global rotation index so the next request starts from the next key/model
+      globalRotationIndex = (globalRotationIndex + attempt) % totalCombinations;
       return result;
 
     } catch (err: any) {
@@ -156,8 +162,10 @@ async function executeWithRotationStream(
   if (keys.length === 0) throw new Error('No API keys configured');
 
   // We define a fallback chain of models to multiply our quota effectively per key.
-  const fallbackModels = ['gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-  const requestedModel = fallbackToDefault ? 'gemini-3.1-flash-lite' : (payload.model || 'gemini-3.1-flash-lite');
+  const fallbackModels = ['gemini-2.0-flash-lite-preview-02-05', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  let reqModel = payload.model;
+  if (reqModel === 'gemini-3.1-flash-lite') reqModel = 'gemini-2.0-flash-lite-preview-02-05';
+  const requestedModel = fallbackToDefault ? 'gemini-2.0-flash-lite-preview-02-05' : (reqModel || 'gemini-2.0-flash-lite-preview-02-05');
   const modelsToTry = Array.from(new Set([requestedModel, ...fallbackModels]));
 
   let maxRetries = Math.max(3, keys.length);
@@ -187,8 +195,9 @@ async function executeWithRotationStream(
   let attempt = 0;
 
   while (attempt < maxRetries) {
-    const keyIndex = Math.floor(attempt / modelsToTry.length) % keys.length;
-    const mIndex = attempt % modelsToTry.length;
+    const currentIndex = (globalRotationIndex + attempt) % totalCombinations;
+    const keyIndex = Math.floor(currentIndex / modelsToTry.length) % keys.length;
+    const mIndex = currentIndex % modelsToTry.length;
     attempt++;
 
     const key = keys[keyIndex];
@@ -208,6 +217,8 @@ async function executeWithRotationStream(
       // but returning the stream object means the API call succeeded in opening the stream.
       const resultStream = await client.models.generateContentStream(attemptPayload as any);
       globalCooldownMap.delete(cooldownId);
+      // Advance the global rotation index so the next request starts from the next key/model
+      globalRotationIndex = (globalRotationIndex + attempt) % totalCombinations;
       return resultStream;
 
     } catch (err: any) {
@@ -363,7 +374,7 @@ export class LLMService {
     const cleanSystemInstruction = stripMarkdownForSystemInstruction(systemPrompt);
 
     const stream = await executeWithRotationStream({
-      model: modelName || 'gemini-2.5-flash',
+      model: modelName || 'gemini-2.0-flash-lite-preview-02-05',
       contents: safeContents as any,
       config: {
         systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
@@ -415,7 +426,7 @@ export class LLMService {
 
     try {
       const response = await executeWithRotation({
-        model: modelName || 'gemini-3.1-flash-lite',
+        model: modelName || 'gemini-2.0-flash-lite-preview-02-05',
         contents: safeContents as any,
         config: {
           systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",

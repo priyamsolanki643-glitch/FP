@@ -108,8 +108,15 @@ interactionRoutes.post('/message/stream', zValidator('json', messageSchema), asy
   }
 
   try {
+    // 1. Establish SSE Connection configuration to avoid proxy buffering
+    c.header('Content-Type', 'text/event-stream');
+    c.header('Cache-Control', 'no-cache');
+    c.header('Connection', 'keep-alive');
+    c.header('X-Accel-Buffering', 'no'); // Prevent Nginx/CloudRun from buffering the SSE stream
+
     const messageTrimmed = message.trim();
-    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi+|hello|hey+|yo|sup|hola|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)[!?.]*\s*$/i.test(messageTrimmed);
+    // Added 'hii' to the regex as requested
+    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi|hii|hello|hey|yo|sup|hola|heyy|heyyy|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)\s*$/i.test(messageTrimmed);
 
     if (isGreeting) {
       const activeMission = await DbService.getActiveMission(actualUserId);
@@ -580,7 +587,8 @@ DO NOT talk about anything else or provide any strategy until they provide this 
         let fullText = '';
         try {
           for await (const chunk of smartResponse.stream) {
-            const chunkText = chunk.text();
+            // Use the getter chunk.text instead of chunk.text() in @google/genai
+            const chunkText = chunk.text || '';
             fullText += chunkText;
             
             // Artificial typing delay for natural UX
