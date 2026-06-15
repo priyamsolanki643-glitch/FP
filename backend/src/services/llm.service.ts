@@ -75,16 +75,27 @@ export async function executeWithRotation(
   let lastError: any = null;
   let attempt = 0;
 
+  // We define a fallback chain of models to multiply our quota effectively per key.
+  const fallbackModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const requestedModel = payload.model || 'gemini-2.5-flash';
+  const modelsToTry = Array.from(new Set([requestedModel, ...fallbackModels]));
+
+  let totalCombinations = keys.length * modelsToTry.length;
+  if (maxRetries < totalCombinations) maxRetries = totalCombinations;
+
   while (attempt < maxRetries) {
-    const keyIndex = attempt % keys.length;
+    // Try all models for a specific key before rotating to the next key
+    const keyIndex = Math.floor(attempt / modelsToTry.length) % keys.length;
+    const mIndex = attempt % modelsToTry.length;
     attempt++;
 
     const key = keys[keyIndex];
+    const actualModel = modelsToTry[mIndex];
     const cooldownId = `${actualModel}-${keyIndex}`;
 
     const cooldownUntil = globalCooldownMap.get(cooldownId);
     if (cooldownUntil && Date.now() < cooldownUntil) {
-      console.log(`[LLM] Skipping key=${keyIndex + 1} (cooldown ${Math.ceil((cooldownUntil - Date.now()) / 1000)}s left)`);
+      console.log(`[LLM] Skipping key=${keyIndex + 1} model=${actualModel} (cooldown ${Math.ceil((cooldownUntil - Date.now()) / 1000)}s left)`);
       continue;
     }
 
@@ -104,20 +115,21 @@ export async function executeWithRotation(
       console.warn(`[LLM] Failed | attempt=${attempt} | model=${actualModel} | key=${keyIndex + 1} | error=${message}`);
 
       if (isModelError(message)) {
-        console.warn(`[LLM] Invalid model: ${actualModel}, aborting`);
-        break;
+        console.warn(`[LLM] Invalid model: ${actualModel}, trying next model`);
+        continue;
       }
 
       if (isQuotaError(message)) {
         const retryDelay = parseRetryDelayMs(message) ?? 60_000;
         globalCooldownMap.set(cooldownId, Date.now() + retryDelay);
-        console.warn(`[LLM] Quota hit key=${keyIndex + 1}. Cooldown ${retryDelay}ms. Trying next key.`);
+        console.warn(`[LLM] Quota hit key=${keyIndex + 1} for model=${actualModel}. Cooldown ${retryDelay}ms. Trying next fallback model.`);
         continue;
       }
 
       if (isRetryableInfraError(message)) {
         const backoff = Math.min(1500 * attempt, 8000);
         await sleep(backoff);
+        attempt--; // retry the EXACT same model and key combination
         continue;
       }
 
