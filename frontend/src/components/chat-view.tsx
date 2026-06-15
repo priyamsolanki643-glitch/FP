@@ -331,6 +331,7 @@ const { data: { session } } = await supabase.auth.getSession();
         
         let accumulatedReply = "";
         let newMsgId = String(Date.now());
+        let streamBuffer = "";
         
         // Push an empty message first
         setMessages((prev) => [...prev, { id: newMsgId, role: "fp", text: "" }]);
@@ -341,7 +342,10 @@ const { data: { session } } = await supabase.auth.getSession();
           done = doneReading;
           if (value) {
             const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
+            streamBuffer += chunk;
+            const lines = streamBuffer.split("\n");
+            streamBuffer = lines.pop() || "";
+            
             for (const line of lines) {
               if (line.startsWith("data: ")) {
                 const dataStr = line.replace("data: ", "");
