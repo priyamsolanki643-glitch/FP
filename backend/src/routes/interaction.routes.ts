@@ -109,7 +109,7 @@ interactionRoutes.post('/message/stream', zValidator('json', messageSchema), asy
 
   try {
     const messageTrimmed = message.trim();
-    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi+|hello|hey+|yo|sup|hola|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)\s*$/i.test(messageTrimmed);
+    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi+|hello|hey+|yo|sup|hola|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)[!?.]*\s*$/i.test(messageTrimmed);
 
     if (isGreeting) {
       const activeMission = await DbService.getActiveMission(actualUserId);
