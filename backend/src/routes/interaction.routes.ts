@@ -109,7 +109,7 @@ interactionRoutes.post('/message/stream', zValidator('json', messageSchema), asy
 
   try {
     const messageTrimmed = message.trim();
-    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi|hello|hey|yo|sup|hola|heyy|heyyy|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)\s*$/i.test(messageTrimmed);
+    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi+|hello|hey+|yo|sup|hola|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)\s*$/i.test(messageTrimmed);
 
     if (isGreeting) {
       const activeMission = await DbService.getActiveMission(actualUserId);
@@ -560,20 +560,35 @@ DO NOT talk about anything else or provide any strategy until they provide this 
           console.error('SMART_RESPONSE_ERROR:', getAIErrorMessage(err));
           const safeText = toUserSafeAIText(err);
           await DbService.saveMessage(currentThreadId, actualUserId, 'fp', safeText);
-          await stream.writeSSE({
-            data: JSON.stringify({ type: 'text', text: safeText })
-          });
+          
+          const words = safeText.split(' ');
+          for (let i = 0; i < words.length; i++) {
+            await stream.writeSSE({
+              data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
+            });
+            await new Promise(r => setTimeout(r, 40));
+          }
           return;
         }
 
         let fullText = '';
-        for await (const chunk of smartResponse.stream) {
-          const chunkText = chunk.text();
-          fullText += chunkText;
+        try {
+          for await (const chunk of smartResponse.stream) {
+            const chunkText = chunk.text();
+            fullText += chunkText;
+            await stream.writeSSE({
+              data: JSON.stringify({ type: 'text', text: chunkText })
+            });
+          }
+        } catch (streamErr: any) {
+          console.error('STREAM_CONSUMPTION_ERROR:', getAIErrorMessage(streamErr));
+          const errText = " ...[System Warning: Stream interrupted by network anomaly]";
+          fullText += errText;
           await stream.writeSSE({
-            data: JSON.stringify({ type: 'text', text: chunkText })
+            data: JSON.stringify({ type: 'text', text: errText })
           });
         }
+        
         llmResponse.response_text = fullText;
 
       // 1. Handle Task Outcome Logging
