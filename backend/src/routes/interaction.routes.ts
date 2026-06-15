@@ -159,12 +159,14 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
       await DbService.saveMessage(currentThreadId, actualUserId, 'fp', responseText);
 
       return streamSSE(c, async (stream) => {
-        const words = responseText.split(' ');
-        for (let i = 0; i < words.length; i++) {
-          await stream.writeSSE({
-            data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
-          });
-          await new Promise(r => setTimeout(r, 40));
+        const words = responseText.split(/(\s+)/);
+        for (const word of words) {
+          if (word) {
+            await stream.writeSSE({
+              data: JSON.stringify({ type: 'text', text: word })
+            });
+            await new Promise(r => setTimeout(r, 25));
+          }
         }
       });
     }
@@ -237,12 +239,14 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
         const safeText = toUserSafeAIText(err);
         
         return streamSSE(c, async (stream) => {
-          const words = safeText.split(' ');
-          for (let i = 0; i < words.length; i++) {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
-            });
-            await new Promise(r => setTimeout(r, 40));
+          const words = safeText.split(/(\s+)/);
+          for (const word of words) {
+            if (word) {
+              await stream.writeSSE({
+                data: JSON.stringify({ type: 'text', text: word })
+              });
+              await new Promise(r => setTimeout(r, 25));
+            }
           }
         });
       }
@@ -561,12 +565,14 @@ DO NOT talk about anything else or provide any strategy until they provide this 
           const safeText = toUserSafeAIText(err);
           await DbService.saveMessage(currentThreadId, actualUserId, 'fp', safeText);
           
-          const words = safeText.split(' ');
-          for (let i = 0; i < words.length; i++) {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
-            });
-            await new Promise(r => setTimeout(r, 40));
+          const words = safeText.split(/(\s+)/);
+          for (const word of words) {
+            if (word) {
+              await stream.writeSSE({
+                data: JSON.stringify({ type: 'text', text: word })
+              });
+              await new Promise(r => setTimeout(r, 25));
+            }
           }
           return;
         }
@@ -576,9 +582,17 @@ DO NOT talk about anything else or provide any strategy until they provide this 
           for await (const chunk of smartResponse.stream) {
             const chunkText = chunk.text();
             fullText += chunkText;
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'text', text: chunkText })
-            });
+            
+            // Artificial typing delay for natural UX
+            const chunkWords = chunkText.split(/(\s+)/);
+            for (const word of chunkWords) {
+              if (word) {
+                await stream.writeSSE({
+                  data: JSON.stringify({ type: 'text', text: word })
+                });
+                await new Promise(r => setTimeout(r, 20));
+              }
+            }
           }
         } catch (streamErr: any) {
           console.error('STREAM_CONSUMPTION_ERROR:', getAIErrorMessage(streamErr));
