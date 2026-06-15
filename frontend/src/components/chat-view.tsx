@@ -7,6 +7,7 @@ import { supabase } from "@/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+const markdownPlugins = [remarkGfm];
 
 interface ChatViewProps {
   onOpenSidebar: () => void;
@@ -695,7 +696,7 @@ const { data: { session } } = await supabase.auth.getSession();
                           onClick={(e) => handleMessageClick(e, m.id)}
                         >
                           <div className="font-serif prose prose-invert prose-p:leading-[1.8] prose-p:mb-5 prose-li:my-1 prose-ul:my-3 prose-headings:font-sans text-[16px] text-[#f2efe8]/90 max-w-none break-words tracking-wide">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            <ReactMarkdown remarkPlugins={markdownPlugins}>
                               {m.text}
                             </ReactMarkdown>
                           </div>

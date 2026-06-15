@@ -12,6 +12,7 @@ const nextConfig = {
     // !! WARN !!
     ignoreBuildErrors: true,
   },
+  transpilePackages: ['react-markdown', 'remark-gfm', 'micromark-util-symbol', 'micromark-util-resolve-all', 'micromark-core-commonmark'],
 };
 
 module.exports = nextConfig;
