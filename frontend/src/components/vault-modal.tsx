@@ -124,15 +124,18 @@ export function VaultModal({ onClose }: VaultModalProps) {
         const { supabase } = await import('@/utils/supabase/client');
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
+        const anonId = localStorage.getItem("fp_anon_id");
         
-        if (!token) {
-          console.error('Vault: No auth token available');
+        if (!token && !anonId) {
+          console.error('Vault: No auth token or anonymous ID available');
           setLoading(false);
           return;
         }
         
         const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '');
-        const headers = { "Authorization": `Bearer ${token}` };
+        const headers: any = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        if (anonId) headers["X-Anonymous-Id"] = anonId;
 
         const [missionRes, mirrorRes, marketRes, rivalRes] = await Promise.all([
           fetch(`${baseUrl}/api/v1/interaction/active-mission`, { headers }),

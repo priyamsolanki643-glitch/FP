@@ -71,11 +71,16 @@ export function ExecutionCockpit() {
   async function fetchActiveMission() {
     setLoading(true);
     try {
-const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonId = localStorage.getItem("fp_anon_id");
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-      const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission`, {
-        headers: { "Authorization": `Bearer ${session?.access_token}` }
+      
+      const headers: any = {};
+      if (session) headers["Authorization"] = `Bearer ${session.access_token}`;
+      if (anonId) headers["X-Anonymous-Id"] = anonId;
 
+      const res = await fetch(`${baseUrl}/api/v1/interaction/active-mission`, {
+        headers
       });
       const result = await res.json();
       
@@ -100,17 +105,17 @@ const { data: { session } } = await supabase.auth.getSession();
         return;
       }
       const diagData = JSON.parse(cachedDiag);
-const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonId = localStorage.getItem("fp_anon_id");
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-      
+      const headers: any = { "Content-Type": "application/json" };
+      if (session) headers["Authorization"] = `Bearer ${session.access_token}`;
+      if (anonId) headers["X-Anonymous-Id"] = anonId;
+
       const res = await fetch(`${baseUrl}/api/v1/interaction/operator/current-tasks`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-"Authorization": `Bearer ${session?.access_token}`
-
-        },
+        headers,
         body: JSON.stringify({
           dayNumber: activeMission.dayNumber,
           matrix: diagData.contextMatrix,
@@ -176,13 +181,15 @@ const { data: { session } } = await supabase.auth.getSession();
       };
 
       const { data: { session } } = await supabase.auth.getSession();
+      const anonId = localStorage.getItem("fp_anon_id");
+      
+      const headers: any = { "Content-Type": "application/json" };
+      if (session) headers["Authorization"] = `Bearer ${session.access_token}`;
+      if (anonId) headers["X-Anonymous-Id"] = anonId;
+
       const res = await fetch(`${baseUrl}/api/v1/interaction/operator/task`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-"Authorization": `Bearer ${session?.access_token}`
-
-        },
+        headers,
         body: JSON.stringify(payload)
       });
       const result = await res.json();
@@ -237,16 +244,17 @@ const { data: { session } } = await supabase.auth.getSession();
       }));
       historyPayload.push({ role: "user", parts: [{ text }] });
 
-const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
+      const anonId = localStorage.getItem("fp_anon_id");
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+      const headers: any = { "Content-Type": "application/json" };
+      if (session) headers["Authorization"] = `Bearer ${session.access_token}`;
+      if (anonId) headers["X-Anonymous-Id"] = anonId;
 
       const res = await fetch(`${baseUrl}/api/v1/interaction/message`, {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-"Authorization": `Bearer ${session?.access_token}`
-
-        },
+        headers,
         body: JSON.stringify({
           message: text,
           conversationHistory: historyPayload,
