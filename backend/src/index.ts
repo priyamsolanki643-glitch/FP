@@ -36,7 +36,7 @@ app.use('*', cors({
     if (allowedOrigins.some(o => origin.startsWith(o))) return origin;
     // Allow any vercel.app subdomain for preview deployments
     if (origin.endsWith('.vercel.app')) return origin;
-    return allowedOrigins[0] || origin;
+    return null;
   },
   allowHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Anonymous-Id'],
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -51,7 +51,7 @@ app.patch('*', requireIdempotency);
 // Global Error Handler to intercept LLM Quota / 429 Errors
 app.onError((err: any, c) => {
   console.error('Global Route Error:', err);
-  const msg: string = err.message || '';
+  const msg = String(err?.message || err || '');
   
   const isQuota = msg.toLowerCase().includes('quota') || 
                   msg.toLowerCase().includes('429') || 

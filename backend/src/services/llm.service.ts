@@ -100,6 +100,7 @@ export async function executeWithRotation(
     const cooldownUntil = globalCooldownMap.get(cooldownId);
     if (cooldownUntil && Date.now() < cooldownUntil) {
       console.log(`[LLM] Skipping key=${keyIndex + 1} model=${actualModel} (cooldown ${Math.ceil((cooldownUntil - Date.now()) / 1000)}s left)`);
+      if (attempt % totalCombinations === 0) await sleep(1000);
       continue;
     }
 
@@ -206,6 +207,7 @@ async function executeWithRotationStream(
 
     const cooldownUntil = globalCooldownMap.get(cooldownId);
     if (cooldownUntil && Date.now() < cooldownUntil) {
+      if (attempt % totalCombinations === 0) await sleep(1000);
       continue;
     }
 
@@ -295,7 +297,7 @@ function buildSafeContents(
 // ─────────────────────────────────────────────────────────────────────────────
 // JSON CLEANER — last-resort fallback if Gemini ignores JSON mode
 // ─────────────────────────────────────────────────────────────────────────────
-function cleanAndParseJSON(text: string): any {
+export function cleanAndParseJSON(text: string): any {
   let cleaned = text.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(json)?\s*/i, '').replace(/\s*```$/, '');
@@ -304,18 +306,21 @@ function cleanAndParseJSON(text: string): any {
   const firstBrace = cleaned.indexOf('{');
   const firstBracket = cleaned.indexOf('[');
   let startIdx = -1;
-  let endIdx = -1;
+  let endChar = '';
 
   if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
     startIdx = firstBrace;
-    endIdx = cleaned.lastIndexOf('}');
+    endChar = '}';
   } else if (firstBracket !== -1) {
     startIdx = firstBracket;
-    endIdx = cleaned.lastIndexOf(']');
+    endChar = ']';
   }
 
-  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-    cleaned = cleaned.substring(startIdx, endIdx + 1);
+  if (startIdx !== -1) {
+    const endIdx = cleaned.lastIndexOf(endChar);
+    if (endIdx > startIdx) {
+      cleaned = cleaned.substring(startIdx, endIdx + 1);
+    }
   }
 
   // Escape unescaped control characters inside strings
@@ -447,9 +452,9 @@ export class LLMService {
         console.log('[generateSmartResponse] Trying fallback model config...');
         const fallbackResponse = await executeWithRotation({
           model: 'gemini-2.0-flash',
-          contents: safeContents as any,
+          contents: [{ role: 'user', parts: [{ text: lastUserMsg || "Hi" }] }] as any,
           config: {
-            systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
+            systemInstruction: "You are a helpful assistant. Reply briefly.",
             temperature: 0.7,
             maxOutputTokens: 2048,
           }
@@ -569,10 +574,7 @@ export class LLMService {
     }
   }
 
-  static async classifyMessageOutcome(message: string): Promise<'completed' | 'failed' | 'none'> {
-    console.warn('LLMService.classifyMessageOutcome is deprecated.');
-    return 'none';
-  }
+
 
   // ──────────────────────────────────────────────────────────────────────────
   // DYNAMIC TASK SPRINT GENERATOR

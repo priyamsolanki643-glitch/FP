@@ -16,7 +16,7 @@ import {
 } from '../engine/index';
 import { updateConsistencyScore } from '../engine/layer10_statelock';
 import { runLegalAudit } from '../engine/layer13_legalaudit';
-import { LLMService } from '../services/llm.service';
+import { LLMService, cleanAndParseJSON } from '../services/llm.service';
 import { analyticsWorker } from '../workers/analytics.worker';
 import { runOmniPipeline, triggerDeepSync } from '../engine/OmniPipeline';
 import type { EmotionalSignal } from '../engine/layer14_empathy';
@@ -193,7 +193,7 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
 
       // Background: generate a smart title and update the thread (non-blocking)
       const threadIdForTitle = currentThreadId;
-      setImmediate(async () => {
+      const titleGenPromise = (async () => {
         try {
           const titlePrompt = `Give a concise 2-4 word topic/title for this message (e.g. "UPSC Preparation", "Startup Idea"). Only output the title text, nothing else.\n\nMessage: "${message}"`;
           const titleRes = await LLMService.generateValidatedResponse(actualUserId, titlePrompt, [], [], 1, 1000, true);
@@ -201,8 +201,11 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
             const cleanTitle = titleRes.response_text.trim().replace(/^["']/,'').replace(/["']$/,'');
             if (cleanTitle) await DbService.updateThreadTitle(threadIdForTitle, cleanTitle);
           }
-        } catch { /* non-critical — instant title stays */ }
-      });
+        } catch (e) { console.error('Background title gen failed:', e); }
+      })();
+      if (c.executionCtx?.waitUntil) {
+        c.executionCtx.waitUntil(titleGenPromise);
+      }
 
     }
 
@@ -323,8 +326,8 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
             user_id: actualUserId,
             missionName: targetPath?.opportunityUsed || (chosenPath === 'alpha' ? "Asymmetric Upside Strategy" : "Compounding Strategy"),
             lockedPath: chosenPath,
-            probabilityLow: targetPath?.probabilityRangeLow || (chosenPath === 'alpha' ? 18.4 : 74.2),
-            probabilityHigh: targetPath?.probabilityRangeHigh || (chosenPath === 'alpha' ? 24.0 : 82.5),
+            probabilityLow: targetPath?.probabilityRangeLow ?? (chosenPath === 'alpha' ? 18.4 : 74.2),
+            probabilityHigh: targetPath?.probabilityRangeHigh ?? (chosenPath === 'alpha' ? 24.0 : 82.5),
             dayNumber: 1,
             totalDays: (targetPath?.timelineMonths || 3) * 30,
             consistencyScore: -1,
@@ -438,7 +441,7 @@ User message: "${message}"`;
         try {
           const extractRes = await LLMService.generateValidatedResponse(actualUserId, extractPrompt, [], [], 3, 1000, true);
           if (extractRes && extractRes.response_text) {
-            const parsed = JSON.parse(extractRes.response_text);
+            const parsed = cleanAndParseJSON(extractRes.response_text);
             if (typeof parsed.score === 'number' && parsed.score >= 0 && parsed.score <= 100) {
               extractedScore = parsed.score;
             }
@@ -693,7 +696,7 @@ DO NOT talk about anything else or provide any strategy until they provide this 
 
     // Background task: Auto-extract mission if no active mission exists yet and this seems like a goal
     if (!activeMission && conversationHistory.length >= 2) {
-      LLMService.classifyMessageOutcome(message).then(async () => {
+      const extractionPromise = (async () => {
         try {
           const extractionPrompt = `
 Analyze the following conversation to determine if the user has established a clear overarching goal or mission.
@@ -716,7 +719,7 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
 
           const extractionRes = await LLMService.generateValidatedResponse(actualUserId, extractionPrompt, [], [], 3, 1000, true);
           if (extractionRes.response_text && extractionRes.response_text.trim() !== 'null') {
-            const parsed = JSON.parse(extractionRes.response_text);
+            const parsed = cleanAndParseJSON(extractionRes.response_text);
             if (parsed.missionName) {
               const existingMission = await DbService.getActiveMission(actualUserId);
               if (existingMission) {
@@ -743,7 +746,10 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
         } catch (e) {
           console.error('Background Mission Extraction Error:', e);
         }
-      });
+      })();
+      if (c.executionCtx?.waitUntil) {
+        c.executionCtx.waitUntil(extractionPromise);
+      }
     }
 
     });
@@ -816,7 +822,7 @@ Do not use markdown blocks.`;
     const response = await LLMService.generateValidatedResponse(userId, prompt, [], []);
     if (response && response.response_text) {
       try {
-        const parsed = JSON.parse(response.response_text);
+        const parsed = cleanAndParseJSON(response.response_text);
         if (parsed.mindsetBrief) dynamicMindset = parsed.mindsetBrief;
         if (parsed.coreStrategy) dynamicCoreStrategy = parsed.coreStrategy;
         if (parsed.strategyContent) dynamicProtocol = parsed.strategyContent;
@@ -1092,7 +1098,7 @@ Do not include markdown or backticks.`;
     const response = await LLMService.generateValidatedResponse(userId, prompt, [], []);
     if (response && response.response_text) {
       try {
-        const parsed = JSON.parse(response.response_text);
+        const parsed = cleanAndParseJSON(response.response_text);
         if (parsed.strengths && parsed.bottlenecks) {
           insightData = parsed;
         }
@@ -1108,10 +1114,12 @@ Do not include markdown or backticks.`;
     console.error('REALITY_MIRROR: Insight LLM fail, using fallback:', err);
   }
 
+  const safeHistory = scores.filter(s => s >= 0);
+
   return c.json({
     status: 'success',
     data: {
-      history: scores.length > 0 ? scores : [activeMission.consistencyScore],
+      history: safeHistory.length > 0 ? safeHistory : (activeMission.consistencyScore >= 0 ? [activeMission.consistencyScore] : []),
       trend,
       strengths: insightData.strengths,
       bottlenecks: insightData.bottlenecks,

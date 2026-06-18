@@ -107,7 +107,7 @@ function buildOmniContext(input: OmniPipelineInput): OmniContext {
     consecutiveFailureCount,
     consecutiveCompletionCount,
     currentDayNumber: strategyState?.currentDayNumber ?? 1,
-    totalTargetDays: strategyState?.totalTargetDays ?? 90,
+    totalTargetDays: strategyState?.totalTargetDays ?? ((contextMatrix?.goalVector?.timelineMonths ?? 3) * 30),
     emotionalResilience: contextMatrix?.psychometric.emotionalResilience ?? 0.5,
     procrastinationScore: contextMatrix?.psychometric.procrastinationScore ?? 0.3,
     runwayDays: contextMatrix?.socioeconomic.runwayDays ?? 999,
@@ -151,7 +151,7 @@ function buildOmniContext(input: OmniPipelineInput): OmniContext {
     goal: contextMatrix?.goalVector.declaredGoal ?? 'Goal not yet defined',
     timelineMonths: contextMatrix?.goalVector.timelineMonths ?? 3,
     currentDayNumber: strategyState?.currentDayNumber ?? 1,
-    totalTargetDays: strategyState?.totalTargetDays ?? 90,
+    totalTargetDays: strategyState?.totalTargetDays ?? ((contextMatrix?.goalVector?.timelineMonths ?? 3) * 30),
     consistencyScore: strategyState?.consistencyScore ?? 50,
     streakDays,
     frictionLevel: frictionProfile?.frictionLevel ?? 'medium',
@@ -188,7 +188,7 @@ function assembleGeminiPrompt(ctx: OmniContext, userLanguage: string): string {
   // Tone directive from Layer 14 (the mathematical emotional instruction set)
   const toneDirective = toneVectorToPromptDirective(toneVector);
 
-  const isNewUser = userSnapshot.goal === 'Goal not yet defined' && recentMemories.length === 0 && currentTasks.length === 0;
+  const isNewUser = userSnapshot.goal === 'Goal not yet defined' && userSnapshot.activePath === 'Awaiting path selection';
 
   // Build the user snapshot block (replaces the massive context matrix injection)
   const snapshotBlock = isNewUser

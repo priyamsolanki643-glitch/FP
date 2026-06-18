@@ -10,7 +10,7 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('CRITICAL: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.');
 }
 
-const isLocalFallback = !supabaseUrl || !supabaseKey;
+const isLocalFallback = process.env.NODE_ENV !== 'production' && (!supabaseUrl || !supabaseKey);
 
 let supabase: any = null;
 const fallbackFilePath = path.join(process.cwd(), 'database.json');
@@ -470,6 +470,18 @@ export class DbService {
       );
       writeLocalDb(data);
       return true;
+    }
+
+    const { data: threadCheck, error: fetchErr } = await supabase
+      .from('chat_threads')
+      .select('id')
+      .eq('id', threadId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchErr || !threadCheck) {
+      console.error('deleteChatThread validation error: Thread not found or not owned by user.', fetchErr);
+      return false;
     }
 
     const { error: msgError } = await supabase

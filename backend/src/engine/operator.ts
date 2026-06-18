@@ -68,6 +68,8 @@ export async function processOperatorTaskUpdate(
   } else if (outcome === 'failed') {
     newStreak = 0;
     consecutiveFailures += 1;
+  } else if (outcome === 'partial') {
+    newStreak = 0; // Partial breaks the strict streak, but doesn't increment consecutive failures
   }
 
   const consistencyEvent: ConsistencyEvent = {
@@ -94,7 +96,7 @@ export async function processOperatorTaskUpdate(
   }
 
   // 3. Recursive Neural Feedback: down-regulate capability V_c if failures build up
-  let updatedCapability = { ...capabilityVector };
+  let updatedCapability: CapabilityVector = { ...capabilityVector };
   let recalibrationOccurred = false;
   if (consecutiveFailures >= 2 && capabilityVector.trueCapabilityScore > 0.15) {
     // Reduce capability score by 15% dynamically due to execution failures
@@ -129,7 +131,7 @@ export async function processOperatorTaskUpdate(
   }
 
   // 6. Generate next day's task sprint
-  let nextDayTaskSprint = null;
+  let nextDayTaskSprint: TaskSprint | null = null;
   if (nextDayNumber <= currentState.totalTargetDays) {
     nextDayTaskSprint = await generateDailyTaskSprint(
       nextDayNumber,
