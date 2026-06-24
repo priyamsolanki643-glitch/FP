@@ -549,6 +549,7 @@ const { data: { session } } = await supabase.auth.getSession();
         <div className="flex items-center gap-3">
           {/* Menu trigger */}
           <button
+            id="sidebar-toggle"
             onClick={onOpenSidebar}
             className="size-9 grid place-items-center bg-transparent text-white hover:text-gray-300 cursor-pointer transition-colors"
           >

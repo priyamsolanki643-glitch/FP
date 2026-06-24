@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, Search, Archive, LogOut, MoreVertical, Trash2 } from "lucide-react";
 import { supabase } from "@/utils/supabase/client";
 
@@ -45,12 +45,23 @@ export function Sidebar({ onOpenVault, onSignOut, isOpen, setIsOpen, isAnonymous
     fetchUser();
   }, []);
 
-  // Close menu on click outside
+  // Close active menu and Sidebar on click outside
+  const sidebarRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
-    const handleClick = () => setActiveChatMenu(null);
+    const handleClick = (e: MouseEvent) => {
+      setActiveChatMenu(null);
+      
+      if (isOpen && sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+        const target = e.target as Element;
+        if (!target.closest('#sidebar-toggle')) {
+          setIsOpen(false);
+        }
+      }
+    };
     window.addEventListener('click', handleClick);
     return () => window.removeEventListener('click', handleClick);
-  }, []);
+  }, [isOpen, setIsOpen]);
 
   const deleteChat = async (threadId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -148,6 +159,7 @@ const { data: { session } } = await supabase.auth.getSession();
       )}
 
       <aside
+        ref={sidebarRef}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         className={`fixed inset-y-0 left-0 z-40 flex flex-col shrink-0 h-screen transition-all duration-300 bg-black/40 backdrop-blur-2xl border-r border-white/5 overflow-hidden ${
@@ -199,19 +211,6 @@ const { data: { session } } = await supabase.auth.getSession();
                 </span>
               )}
             </div>
-            {isOpen && (
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="text-[#666666] hover:text-white transition-colors cursor-pointer p-1"
-              >
-                {/* 3 dots icon */}
-                <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="1" />
-                  <circle cx="19" cy="12" r="1" />
-                  <circle cx="5" cy="12" r="1" />
-                </svg>
-              </button>
-            )}
           </div>
 
           {/* New Thread Button */}

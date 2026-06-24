@@ -759,18 +759,13 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       const prompt = `You are a data extractor for a startup strategy engine.
 Analyze this conversation and extract the user's onboarding parameters.
 
-Only set isComplete to TRUE if all 6 items are clearly present in the conversation:
-1. Their specific goal (what they want to achieve)
-2. Their approximate liquid capital / financial resources
-3. Their skills (at least 1 specific skill mentioned)
-4. Their daily available hours
-5. Their approximate location / region
-6. Their approximate age
+Only set isComplete to TRUE if the user has explicitly stated a specific goal (what they want to achieve).
+You do NOT need the other parameters to set isComplete to TRUE. If they are missing or vague, just use reasonable defaults or empty strings.
 
 Conversation:
 ${historyText}
 
-Extract parameters. If any of the 6 items are missing or vague, set isComplete to false.`;
+Extract parameters. If the goal is missing or vague, set isComplete to false.`;
 
       const responseSchema: Schema = {
         type: Type.OBJECT,
