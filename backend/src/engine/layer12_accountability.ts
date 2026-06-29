@@ -98,9 +98,9 @@ export function classifyFailureType(userExplanation: string): {
     };
   }
 
-  // Default to procrastination when ambiguous (most common actual cause)
+  // Default to ambiguous when low confidence
   return {
-    failureType: 'internal_procrastination',
+    failureType: 'internal_procrastination', // Keep type for type-safety but flag it
     isInternal: true,
     confidence: 0.40, // Low confidence — ambiguous
   };
@@ -371,14 +371,23 @@ export function runFailureDiagnostic(
   let responseType: AccountabilityResponseType;
 
   if (isInternal) {
-    fpResponse = generateEgoCritique(
-      matrix.psychometric.egoLeveragePoint,
-      failureType,
-      userExplanation,
-      strategyState.consistencyScore,
-      strategyState.currentDayNumber,
-    );
-    responseType = failureType === 'internal_burnout' ? 'failure_forensic' : 'ego_critique';
+    if (confidence < 0.5) {
+      fpResponse = `System logged a failure, but the root cause is unclear from your message. 
+
+To calibrate correctly, I need precision. Was this failure due to an external blocker (e.g. infrastructure, emergency, technical error) or an internal execution gap (e.g. avoidance, distraction)? 
+
+State the exact reason clearly.`;
+      responseType = 'failure_forensic';
+    } else {
+      fpResponse = generateEgoCritique(
+        matrix.psychometric.egoLeveragePoint,
+        failureType,
+        userExplanation,
+        strategyState.consistencyScore,
+        strategyState.currentDayNumber,
+      );
+      responseType = failureType === 'internal_burnout' ? 'failure_forensic' : 'ego_critique';
+    }
   } else {
     fpResponse = generateExternalFailureResponse(failureType, userExplanation, strategyState);
     responseType = 'failure_forensic';
@@ -403,7 +412,7 @@ export function runFailureDiagnostic(
     failureType,
     isInternal,
     isExternal: !isInternal,
-    consistencyScoreDelta: isInternal ? -ENGINE_AXIOMS.CONSISTENCY_FAILURE_PENALTY : 0,
+    consistencyScoreDelta: (isInternal && confidence >= 0.5) ? -ENGINE_AXIOMS.CONSISTENCY_FAILURE_PENALTY : 0,
     responseType,
     fpResponse,
     choices,
@@ -479,6 +488,12 @@ const EXECUTION_SIGNALS = [
   'done', 'completed', 'finished', 'submitted', 'sent it', 'delivered',
 ];
 
+const CLARIFICATION_SIGNALS = [
+  'how to', 'explain', 'debug', 'why did', 'why is', 'error', 'not working',
+  'what does this mean', 'help me understand', 'clarify', 'i don\'t understand',
+  'fix this', 'issue', 'bug', 'can we change', 'different path'
+];
+
 export function detectDopamineLoop(userMessage: string): {
   isDopamineLoop: boolean;
   isExecution: boolean;
@@ -486,6 +501,19 @@ export function detectDopamineLoop(userMessage: string): {
   response: string | null;
 } {
   const messageLower = userMessage.toLowerCase();
+
+  const clarificationSignalCount = CLARIFICATION_SIGNALS.filter((s) =>
+    messageLower.includes(s)
+  ).length;
+
+  if (clarificationSignalCount > 0) {
+    return {
+      isDopamineLoop: false,
+      isExecution: false,
+      confidence: 0,
+      response: null,
+    };
+  }
 
   const dopamineSignalCount = DOPAMINE_LOOP_SIGNALS.filter((s) =>
     messageLower.includes(s)
@@ -504,18 +532,21 @@ export function detectDopamineLoop(userMessage: string): {
     };
   }
 
-  if (dopamineSignalCount > 2) { // Requires at least 3 signals
+  if (dopamineSignalCount > 1) { // Requires at least 2 signals or stronger match
     return {
       isDopamineLoop: true,
       isExecution: false,
-      confidence: Math.min(1.0, dopamineSignalCount / 4),
-      response: `Ek baat dhyan rakh:
+      confidence: Math.min(1.0, dopamineSignalCount / 3),
+      response: `Ek baat bataa, is sawal ko puchne se pehle:
 
-Planning aur naye ideas tabhi kaam aate hain jab unke piche execution ho. Tere messages se lag raha hai ki tu action lene ki jagah overthink kar raha hai.
+Tune apna aaj ka assigned task complete kiya hai?
 
-Kya tune aaj ka main task shuru kiya hai? Agar haan, to uski progress bata. Agar nahi, to abhi ye sab rok aur pehle execution pe lag ja. Badi baatein baad me karenge, pehle action le.
+Agar haan — toh task completion log kar aur phir sawal puch. Main log ke baad jawab dunga.
+Agar nahi — toh ye jo tu sawal puch rha hai, ye sirf productive procrastination hai. Tu dimaag chalane ka validation chahta hai bina actually execute kiye.
 
-Task status kya hai?`,
+Mujhse baatein karne se tera goal complete nahi hoga. Mera kaam tujhe motivate karna nahi, tujhse kaam karwana hai.
+
+Task completion status kya hai: [yes/no]?`,
     };
   }
 
@@ -538,7 +569,7 @@ export function generateRealityCheck(
   consistencyScore: number,
   egoLeveragePoint: EgoLeveragePoint,
 ): string {
-  if (consecutiveFailureCount >= 5 && consistencyScore < 50) {
+  if (consecutiveFailureCount >= 3 && consistencyScore < 50) {
     return `Bhai, ab ek seedhi aur sachhi baat karte hain.
 
 Tere continuous ${consecutiveFailureCount} failures ho chuke hain aur tera consistency score sirf ${consistencyScore}/100 bacha hai.
@@ -558,7 +589,7 @@ Abhi tu kya choose kar rha hai? Awaiting your clear response:
 [C] Mujhe reset karna hai. Main koi aisa goal select karunga jiske liye main elite sacrifice ke liye ready hun.`;
   }
 
-  if (consecutiveFailureCount >= 3) {
+  if (consecutiveFailureCount >= 2) {
     return `Back-to-back 2 din failure. Pattern shuru ho rha hai tera.
 
 Tere kaam rokne se strategy nahi rukti, bas progress rukti hai.

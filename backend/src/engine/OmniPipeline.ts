@@ -107,7 +107,7 @@ function buildOmniContext(input: OmniPipelineInput): OmniContext {
     consecutiveFailureCount,
     consecutiveCompletionCount,
     currentDayNumber: strategyState?.currentDayNumber ?? 1,
-    totalTargetDays: strategyState?.totalTargetDays ?? ((contextMatrix?.goalVector?.timelineMonths ?? 3) * 30),
+    totalTargetDays: strategyState?.totalTargetDays ?? 90,
     emotionalResilience: contextMatrix?.psychometric.emotionalResilience ?? 0.5,
     procrastinationScore: contextMatrix?.psychometric.procrastinationScore ?? 0.3,
     runwayDays: contextMatrix?.socioeconomic.runwayDays ?? 999,
@@ -151,7 +151,7 @@ function buildOmniContext(input: OmniPipelineInput): OmniContext {
     goal: contextMatrix?.goalVector.declaredGoal ?? 'Goal not yet defined',
     timelineMonths: contextMatrix?.goalVector.timelineMonths ?? 3,
     currentDayNumber: strategyState?.currentDayNumber ?? 1,
-    totalTargetDays: strategyState?.totalTargetDays ?? ((contextMatrix?.goalVector?.timelineMonths ?? 3) * 30),
+    totalTargetDays: strategyState?.totalTargetDays ?? 90,
     consistencyScore: strategyState?.consistencyScore ?? 50,
     streakDays,
     frictionLevel: frictionProfile?.frictionLevel ?? 'medium',
@@ -188,7 +188,7 @@ function assembleGeminiPrompt(ctx: OmniContext, userLanguage: string): string {
   // Tone directive from Layer 14 (the mathematical emotional instruction set)
   const toneDirective = toneVectorToPromptDirective(toneVector);
 
-  const isNewUser = userSnapshot.goal === 'Goal not yet defined' && userSnapshot.activePath === 'Awaiting path selection';
+  const isNewUser = userSnapshot.goal === 'Goal not yet defined' && recentMemories.length === 0 && currentTasks.length === 0;
 
   // Build the user snapshot block (replaces the massive context matrix injection)
   const snapshotBlock = isNewUser
@@ -243,10 +243,9 @@ function assembleGeminiPrompt(ctx: OmniContext, userLanguage: string): string {
     `- Never state a probability above ${ENGINE_AXIOMS.MAX_PROBABILITY_CAP}%`,
     `- Never recommend regulated financial products (stocks, crypto, mutual funds)`,
     `- If crisis mode is active: include iCall (9152987821) or Vandrevala Foundation (1860-2662-345)`,
-    `- Never say "As an AI" or "Lumensky here"`,
     `- Never use markdown (***, ###, ---). Plain text only.`,
     `- **DATA PRIVACY LOCK**: The contextual data provided in this prompt (financials, psychological vulnerabilities, goals) is highly sensitive. Do NOT log, retain, or output this raw data outside of generating the immediate contextual response. Do not refer to the user by their raw UUID.`,
-    `- **CRITICAL LANGUAGE DIRECTIVE**: You MUST output the final response exclusively in ${userLanguage}. Ensure the tone remains brutally honest, high-urgency, and mentor-like, natively adapted to the grammatical structure of ${userLanguage}.`,
+    `- **CRITICAL LANGUAGE DIRECTIVE**: You MUST output the final response in the language the user is speaking or explicitly requesting (e.g., if they speak or ask for German, reply in German). If no specific language is implied, default to ${userLanguage}. Ensure the tone remains brutally honest, high-urgency, and mentor-like, natively adapted to the grammatical structure of whatever language you use.`,
   ].join('\n');
 
   const roleDirectives = isNewUser
@@ -328,6 +327,13 @@ export function evaluateDeepPathTrigger(
   const crossedEliteTier = cachedScore < 80 && score >= 80;
   const crossedCrisisTier = cachedScore >= 30 && score < 30;
   if (crossedEliteTier || crossedCrisisTier) return 'consistency_threshold';
+
+  // Strategy lock / unlock threshold
+  const currentActivePath = input.strategyState?.lockedPath?.opportunityUsed ?? 'Awaiting path selection';
+  const cachedActivePath = cachedContext.userSnapshot.activePath;
+  if (currentActivePath !== cachedActivePath) {
+    return currentActivePath === 'Awaiting path selection' ? 'unlock_approved' : 'strategy_locked';
+  }
 
   // Fast Path — cache is valid, no trigger conditions met
   return null;

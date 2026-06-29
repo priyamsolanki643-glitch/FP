@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
 import { interactionRoutes } from './routes/interaction.routes';
+import { streamRoutes } from './routes/stream.routes';
 import { authRoutes } from './routes/auth.routes';
 import { threadRoutes } from './routes/thread.routes';
 import { DbService } from './services/db.service';
@@ -36,7 +37,7 @@ app.use('*', cors({
     if (allowedOrigins.some(o => origin.startsWith(o))) return origin;
     // Allow any vercel.app subdomain for preview deployments
     if (origin.endsWith('.vercel.app')) return origin;
-    return null;
+    return allowedOrigins[0] || origin;
   },
   allowHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Anonymous-Id'],
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -51,7 +52,7 @@ app.patch('*', requireIdempotency);
 // Global Error Handler to intercept LLM Quota / 429 Errors
 app.onError((err: any, c) => {
   console.error('Global Route Error:', err);
-  const msg = String(err?.message || err || '');
+  const msg: string = err.message || '';
   
   const isQuota = msg.toLowerCase().includes('quota') || 
                   msg.toLowerCase().includes('429') || 
@@ -103,23 +104,9 @@ app.get('/api/test-ai', async (c) => {
 
 // Mount specific domains
 app.route('/api/v1/interaction', interactionRoutes);
+app.route('/api/v1/interaction', streamRoutes);
 app.route('/api/v1/auth', authRoutes);
 app.route('/api/v1/threads', threadRoutes);
-
-// B2B CMO Dashboard Endpoint for PW Pitch (Real Aggregation)
-app.get('/api/v1/analytics/cohort-health', async (c) => {
-  try {
-    const b2bData = await DbService.getB2bCohortAnalytics();
-    
-    return c.json({
-      status: 'success',
-      data: b2bData
-    });
-  } catch (err) {
-    console.error("Cohort Health API Error:", err);
-    return c.json({ error: "Failed to fetch cohort analytics" }, 500);
-  }
-});
 
 // Cloud Run sets PORT env var to 8080 — always read directly from process.env
 const PORT = process.env.PORT || 8080;

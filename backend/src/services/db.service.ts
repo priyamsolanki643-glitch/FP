@@ -462,29 +462,21 @@ export class DbService {
     }
   }
 
-  static async getChatThreads(userId: string, query?: string): Promise<any[]> {
+  static async getChatThreads(userId: string): Promise<any[]> {
     if (userId.startsWith('anon_')) return [];
 
     if (isLocalFallback) {
       const data = readLocalDb();
-      let threads = data.chat_threads.filter((t) => t.user_id === userId);
-      if (query) {
-        threads = threads.filter((t) => t.title.toLowerCase().includes(query.toLowerCase()));
-      }
-      return threads.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+      return data.chat_threads
+        .filter((t) => t.user_id === userId)
+        .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
     }
 
-    let queryBuilder = supabase
+    const { data, error } = await supabase
       .from('chat_threads')
       .select('*')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
-
-    if (query) {
-      queryBuilder = queryBuilder.ilike('title', `%${query}%`);
-    }
-
-    const { data, error } = await queryBuilder;
 
     if (error) {
       console.error('getChatThreads DB error:', error);

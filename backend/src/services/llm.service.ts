@@ -13,15 +13,12 @@ const HARDCODED_KEYS: string[] = [];
 // ─────────────────────────────────────────────────────────────────────────────
 const globalCooldownMap = new Map<string, number>();
 
-// Track the global rotation state across multiple users and requests
-let globalRotationIndex = 0;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // CORE EXECUTOR — smart key rotation with per-key cooldowns
 // ─────────────────────────────────────────────────────────────────────────────
 export async function executeWithRotation(
   payload: any,
-  maxRetries = 15
+  maxRetries = 5
 ): Promise<any> {
   const keys = [
     ...(process.env.AI_KEYS ? process.env.AI_KEYS.split(',') : []),
@@ -78,29 +75,16 @@ export async function executeWithRotation(
   let lastError: any = null;
   let attempt = 0;
 
-  // We define a fallback chain of models to multiply our quota effectively per key.
-  const fallbackModels = ['gemini-2.0-flash-lite-preview-02-05', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-  const requestedModel = payload.model === 'gemini-3.1-flash-lite' ? 'gemini-2.0-flash-lite-preview-02-05' : (payload.model || 'gemini-2.0-flash-lite-preview-02-05');
-  const modelsToTry = Array.from(new Set([requestedModel, ...fallbackModels]));
-
-  let totalCombinations = keys.length * modelsToTry.length;
-  if (maxRetries < totalCombinations) maxRetries = totalCombinations;
-
-  while (attempt < maxRetries) {
-    // Determine the current index using the global rotation index plus the current attempt
-    const currentIndex = (globalRotationIndex + attempt) % totalCombinations;
-    const keyIndex = Math.floor(currentIndex / modelsToTry.length) % keys.length;
-    const mIndex = currentIndex % modelsToTry.length;
+  for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+    if (attempt >= maxRetries) break;
     attempt++;
 
     const key = keys[keyIndex];
-    const actualModel = modelsToTry[mIndex];
     const cooldownId = `${actualModel}-${keyIndex}`;
 
     const cooldownUntil = globalCooldownMap.get(cooldownId);
     if (cooldownUntil && Date.now() < cooldownUntil) {
-      console.log(`[LLM] Skipping key=${keyIndex + 1} model=${actualModel} (cooldown ${Math.ceil((cooldownUntil - Date.now()) / 1000)}s left)`);
-      if (attempt % totalCombinations === 0) await sleep(1000);
+      console.log(`[LLM] Skipping key=${keyIndex + 1} (cooldown ${Math.ceil((cooldownUntil - Date.now()) / 1000)}s left)`);
       continue;
     }
 
@@ -112,8 +96,6 @@ export async function executeWithRotation(
 
       const result = await client.models.generateContent(attemptPayload as any);
       globalCooldownMap.delete(cooldownId);
-      // Advance the global rotation index so the next request starts from the next key/model
-      globalRotationIndex = (globalRotationIndex + attempt) % totalCombinations;
       return result;
 
     } catch (err: any) {
@@ -121,22 +103,21 @@ export async function executeWithRotation(
       const message = getErrorMessage(err);
       console.warn(`[LLM] Failed | attempt=${attempt} | model=${actualModel} | key=${keyIndex + 1} | error=${message}`);
 
-      if (isModelError(message)) {
-        console.warn(`[LLM] Invalid model: ${actualModel}, trying next model`);
-        continue;
+      if (isModelError(message) || message.includes('400') || message.includes('401') || message.includes('unauthorized')) {
+        console.error(`[LLM] Fatal Error: ${message}`);
+        throw new Error(`Fatal LLM Error: ${message}`);
       }
 
       if (isQuotaError(message)) {
         const retryDelay = parseRetryDelayMs(message) ?? 60_000;
         globalCooldownMap.set(cooldownId, Date.now() + retryDelay);
-        console.warn(`[LLM] Quota hit key=${keyIndex + 1} for model=${actualModel}. Cooldown ${retryDelay}ms. Trying next fallback model.`);
+        console.warn(`[LLM] Quota hit key=${keyIndex + 1}. Cooldown ${retryDelay}ms. Trying next key.`);
         continue;
       }
 
       if (isRetryableInfraError(message)) {
         const backoff = Math.min(1500 * attempt, 8000);
         await sleep(backoff);
-        attempt--; // retry the EXACT same model and key combination
         continue;
       }
 
@@ -147,9 +128,12 @@ export async function executeWithRotation(
   throw lastError || new Error('All configured AI API keys are currently in cooldown (resource_exhausted). Please retry in a minute.');
 }
 
-async function executeWithRotationStream(
+// ─────────────────────────────────────────────────────────────────────────────
+// CORE EXECUTOR STREAM — smart key rotation returning an AsyncGenerator stream
+// ─────────────────────────────────────────────────────────────────────────────
+export async function executeWithRotationStream(
   payload: any,
-  fallbackToDefault: boolean = true
+  maxRetries = 5
 ): Promise<any> {
   const keys = [
     ...(process.env.AI_KEYS ? process.env.AI_KEYS.split(',') : []),
@@ -160,100 +144,73 @@ async function executeWithRotationStream(
     ...HARDCODED_KEYS
   ].map(k => k?.trim()).filter(Boolean) as string[];
 
-  if (keys.length === 0) throw new Error('No API keys configured');
+  if (keys.length === 0) throw new Error('No AI API Keys configured');
 
-  // We define a fallback chain of models to multiply our quota effectively per key.
-  const fallbackModels = ['gemini-2.0-flash-lite-preview-02-05', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-  let reqModel = payload.model;
-  if (reqModel === 'gemini-3.1-flash-lite') reqModel = 'gemini-2.0-flash-lite-preview-02-05';
-  const requestedModel = fallbackToDefault ? 'gemini-2.0-flash-lite-preview-02-05' : (reqModel || 'gemini-2.0-flash-lite-preview-02-05');
-  const modelsToTry = Array.from(new Set([requestedModel, ...fallbackModels]));
-
-  let maxRetries = Math.max(3, keys.length);
-  let totalCombinations = keys.length * modelsToTry.length;
-  if (maxRetries < totalCombinations) maxRetries = totalCombinations;
-
+  const actualModel = payload.model || 'gemini-2.5-flash';
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const getErrorMessage = (err: any) => err?.message || err?.toString() || '';
-  const isModelError = (message: string) => message.includes('404') || message.includes('models/') || message.includes('not found');
-  const isQuotaError = (message: string) => message.includes('429') || message.includes('quota') || message.includes('resource_exhausted');
+  const getErrorMessage = (err: any): string => err?.message || err?.error?.message || err?.statusText || JSON.stringify(err);
   
   const parseRetryDelayMs = (message: string): number | null => {
-    const match = message.match(/retry in (\d+)s/i);
-    return match ? parseInt(match[1]) * 1000 : null;
+    if (!message) return null;
+    const retryInMatch = message.match(/retry in\s+([\d.]+)s/i);
+    if (retryInMatch) return Math.ceil(parseFloat(retryInMatch[1]) * 1000) + 500;
+    const tryAgainMatch = message.match(/try again in\s+([\d.]+)s/i);
+    if (tryAgainMatch) return Math.ceil(parseFloat(tryAgainMatch[1]) * 1000) + 500;
+    return null;
+  };
+
+  const isQuotaError = (message: string): boolean => {
+    const m = message.toLowerCase();
+    return m.includes('quota exceeded') || m.includes('resource_exhausted') || m.includes('429') || m.includes('rate limit') || m.includes('too many requests');
+  };
+
+  const isModelError = (message: string): boolean => {
+    const m = message.toLowerCase();
+    return m.includes('model not found') || m.includes('unsupported model') || m.includes('invalid model');
   };
 
   const isRetryableInfraError = (message: string): boolean => {
     const m = message.toLowerCase();
-    return m.includes('503') || m.includes('overloaded') || m.includes('unavailable') ||
-      m.includes('internal error') || m.includes('deadline exceeded') ||
-      m.includes('timed out') || m.includes('timeout') ||
-      m.includes('econnreset') || m.includes('socket hang up');
+    return m.includes('503') || m.includes('overloaded') || m.includes('unavailable') || m.includes('internal error') || m.includes('deadline exceeded') || m.includes('timeout') || m.includes('econnreset') || m.includes('socket hang up');
   };
 
   let lastError: any = null;
   let attempt = 0;
 
-  while (attempt < maxRetries) {
-    const currentIndex = (globalRotationIndex + attempt) % totalCombinations;
-    const keyIndex = Math.floor(currentIndex / modelsToTry.length) % keys.length;
-    const mIndex = currentIndex % modelsToTry.length;
+  for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+    if (attempt >= maxRetries) break;
     attempt++;
 
     const key = keys[keyIndex];
-    const actualModel = modelsToTry[mIndex];
     const cooldownId = `${actualModel}-${keyIndex}`;
 
     const cooldownUntil = globalCooldownMap.get(cooldownId);
-    if (cooldownUntil && Date.now() < cooldownUntil) {
-      if (attempt % totalCombinations === 0) await sleep(1000);
-      continue;
-    }
+    if (cooldownUntil && Date.now() < cooldownUntil) continue;
 
     const client = new GoogleGenAI({ apiKey: key });
 
     try {
       const attemptPayload = { ...payload, model: actualModel };
-      // Note: the stream isn't "complete" until the client consumes it, 
-      // but returning the stream object means the API call succeeded in opening the stream.
-      const resultStream = await client.models.generateContentStream(attemptPayload as any);
+      const result = await client.models.generateContentStream(attemptPayload as any);
       globalCooldownMap.delete(cooldownId);
-      // Advance the global rotation index so the next request starts from the next key/model
-      globalRotationIndex = (globalRotationIndex + attempt) % totalCombinations;
-      return resultStream;
-
+      return result;
     } catch (err: any) {
       lastError = err;
       const message = getErrorMessage(err);
-      console.warn(`[LLM Stream] Failed | attempt=${attempt} | model=${actualModel} | key=${keyIndex + 1} | error=${message}`);
-
-      if (isModelError(message)) {
-        console.warn(`[LLM Stream] Invalid model: ${actualModel}, trying next model`);
-        continue;
-      }
-
+      if (isModelError(message) || message.includes('400') || message.includes('401')) throw new Error(`Fatal LLM Error: ${message}`);
       if (isQuotaError(message)) {
-        const retryDelay = parseRetryDelayMs(message) ?? 60_000;
-        globalCooldownMap.set(cooldownId, Date.now() + retryDelay);
-        console.warn(`[LLM Stream] Quota hit key=${keyIndex + 1} for model=${actualModel}. Cooldown ${retryDelay}ms. Trying next fallback model.`);
+        globalCooldownMap.set(cooldownId, Date.now() + (parseRetryDelayMs(message) ?? 60_000));
         continue;
       }
-
       if (isRetryableInfraError(message)) {
-        const backoff = Math.min(1500 * attempt, 8000);
-        await sleep(backoff);
-        attempt--; // retry the EXACT same model and key combination
+        await sleep(Math.min(1500 * attempt, 8000));
         continue;
       }
-
       await sleep(400);
     }
   }
-
-  throw lastError || new Error('All configured AI API keys are currently in cooldown (resource_exhausted). Please retry in a minute.');
+  throw lastError || new Error('All configured AI API keys are currently in cooldown. Please retry in a minute.');
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SAFE JSON BUILDER — constructs a safe, Gemini-parseable contents array
@@ -297,7 +254,7 @@ function buildSafeContents(
 // ─────────────────────────────────────────────────────────────────────────────
 // JSON CLEANER — last-resort fallback if Gemini ignores JSON mode
 // ─────────────────────────────────────────────────────────────────────────────
-export function cleanAndParseJSON(text: string): any {
+function cleanAndParseJSON(text: string): any {
   let cleaned = text.trim();
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(json)?\s*/i, '').replace(/\s*```$/, '');
@@ -306,21 +263,18 @@ export function cleanAndParseJSON(text: string): any {
   const firstBrace = cleaned.indexOf('{');
   const firstBracket = cleaned.indexOf('[');
   let startIdx = -1;
-  let endChar = '';
+  let endIdx = -1;
 
   if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
     startIdx = firstBrace;
-    endChar = '}';
+    endIdx = cleaned.lastIndexOf('}');
   } else if (firstBracket !== -1) {
     startIdx = firstBracket;
-    endChar = ']';
+    endIdx = cleaned.lastIndexOf(']');
   }
 
-  if (startIdx !== -1) {
-    const endIdx = cleaned.lastIndexOf(endChar);
-    if (endIdx > startIdx) {
-      cleaned = cleaned.substring(startIdx, endIdx + 1);
-    }
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    cleaned = cleaned.substring(startIdx, endIdx + 1);
   }
 
   // Escape unescaped control characters inside strings
@@ -363,45 +317,6 @@ export class LLMService {
   // Uses plain-text mode (NOT JSON mode) for maximum reliability.
   // JSON mode has too many constraints that cause 400 errors in production.
   // ──────────────────────────────────────────────────────────────────────────
-  static async generateSmartResponseStream(
-    userId: string,
-    systemPrompt: string,
-    conversationHistory: { role: 'user' | 'model'; parts: { text: string }[] }[] = [],
-    isModeOnboarding: boolean,
-    modelName?: string
-  ): Promise<any> {
-    const MAX_HISTORY = 10;
-    const rawHistory = conversationHistory.length > MAX_HISTORY
-      ? conversationHistory.slice(-MAX_HISTORY)
-      : conversationHistory;
-
-    const safeContents = buildSafeContents(rawHistory);
-    const cleanSystemInstruction = stripMarkdownForSystemInstruction(systemPrompt);
-
-    const stream = await executeWithRotationStream({
-      model: modelName || 'gemini-2.0-flash-lite-preview-02-05',
-      contents: safeContents as any,
-      config: {
-        systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
-        temperature: 0.9,
-        maxOutputTokens: 4096,
-      }
-    });
-
-    const lastUserTurn = [...conversationHistory].reverse().find(t => t.role === 'user');
-    const lastUserMsg = lastUserTurn?.parts?.map(p => p.text).join(' ') || '';
-    const msg = lastUserMsg.toLowerCase();
-    let task_classification: 'completed' | 'failed' | 'none' = 'none';
-
-    if (/\b(done|kiya|kar liya|complete|finish|ho gaya|completed|submitted|sent|bana liya|dekh liya|call kiya|gaya tha|gaye|aa gaya)\b/i.test(msg)) {
-      task_classification = 'completed';
-    } else if (/\b(fail|nahi|nhi|miss|skip|chuk|couldn't|could not|na ho|ho nahi|kar nahi|nahi kar|nahi ho|blocked)\b/i.test(msg)) {
-      task_classification = 'failed';
-    }
-
-    return { stream, task_classification };
-  }
-
   static async generateSmartResponse(
     userId: string,
     systemPrompt: string,
@@ -431,7 +346,7 @@ export class LLMService {
 
     try {
       const response = await executeWithRotation({
-        model: modelName || 'gemini-2.0-flash-lite-preview-02-05',
+        model: modelName || 'gemini-2.5-flash',
         contents: safeContents as any,
         config: {
           systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
@@ -452,9 +367,9 @@ export class LLMService {
         console.log('[generateSmartResponse] Trying fallback model config...');
         const fallbackResponse = await executeWithRotation({
           model: 'gemini-2.0-flash',
-          contents: [{ role: 'user', parts: [{ text: lastUserMsg || "Hi" }] }] as any,
+          contents: safeContents as any,
           config: {
-            systemInstruction: "You are a helpful assistant. Reply briefly.",
+            systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
             temperature: 0.7,
             maxOutputTokens: 2048,
           }
@@ -481,6 +396,45 @@ export class LLMService {
     }
 
     return { response_text: responseText, task_classification };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // PRIMARY CHAT RESPONDER (STREAMING)
+  // Returns an async iterable stream for ultra-low latency SSE TTFT
+  // ──────────────────────────────────────────────────────────────────────────
+  static async generateSmartResponseStream(
+    userId: string,
+    systemPrompt: string,
+    conversationHistory: { role: 'user' | 'model'; parts: { text: string }[] }[] = [],
+    modelName?: string
+  ): Promise<{ stream: any, task_classification: 'completed' | 'failed' | 'none' }> {
+    const lastUserTurn = [...conversationHistory].reverse().find(t => t.role === 'user');
+    const lastUserMsg = lastUserTurn?.parts?.map(p => p.text).join(' ') || '';
+    
+    const MAX_HISTORY = 10;
+    const rawHistory = conversationHistory.length > MAX_HISTORY ? conversationHistory.slice(-MAX_HISTORY) : conversationHistory;
+    const safeContents = buildSafeContents(rawHistory);
+    const cleanSystemInstruction = stripMarkdownForSystemInstruction(systemPrompt);
+
+    const msg = lastUserMsg.toLowerCase();
+    let task_classification: 'completed' | 'failed' | 'none' = 'none';
+    if (/\b(done|kiya|kar liya|complete|finish|ho gaya|completed|submitted|sent|bana liya|dekh liya|call kiya|gaya tha|gaye|aa gaya)\b/i.test(msg)) {
+      task_classification = 'completed';
+    } else if (/\b(fail|nahi|nhi|miss|skip|chuk|couldn't|could not|na ho|ho nahi|kar nahi|nahi kar|nahi ho|blocked)\b/i.test(msg)) {
+      task_classification = 'failed';
+    }
+
+    const stream = await executeWithRotationStream({
+      model: modelName || 'gemini-2.5-flash',
+      contents: safeContents as any,
+      config: {
+        systemInstruction: cleanSystemInstruction + "\n\nCRITICAL: You MUST complete your sentences fully. Never leave a thought unfinished or cut off mid-sentence.",
+        temperature: 0.9,
+        maxOutputTokens: 4096,
+      }
+    });
+
+    return { stream, task_classification };
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -574,7 +528,28 @@ export class LLMService {
     }
   }
 
+  static async classifyMessageOutcome(message: string): Promise<'completed' | 'failed' | 'none'> {
+    console.warn('LLMService.classifyMessageOutcome is deprecated.');
+    return 'none';
+  }
 
+  static async generateThreadTitle(message: string): Promise<string> {
+    const systemPrompt = `You are an AI that generates concise 2-5 word titles for chat threads based on the user's message.
+Focus on the main topic, entity, or intent. Capitalize appropriately (Title Case).
+Examples: 'Preparing for UPSC', 'Fixing React Bug', 'Diet Plan Discussion'.
+Never critique the user's grammar. Never return 'Unclear message'. If the message is a generic greeting, return 'General Chat'.
+Return ONLY the title string, without quotes or punctuation.`;
+    try {
+      const response = await executeWithRotation({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: `Message: "${message}"` }] }] as any,
+        systemInstruction: { parts: [{ text: systemPrompt }] }
+      });
+      return response.text ? response.text.trim().replace(/^"|"$/g, '') : "Conversation";
+    } catch (e) {
+      return "Conversation";
+    }
+  }
 
   // ──────────────────────────────────────────────────────────────────────────
   // DYNAMIC TASK SPRINT GENERATOR
@@ -727,7 +702,6 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
     dailyUninterruptedHours: number;
     rawSkillStrings: string[];
     pathPreference: 'high_risk_upside' | 'safe_compounding' | 'undecided';
-    age: number;
   }> {
     const SAFE_FALLBACK: {
       isComplete: boolean;
@@ -738,7 +712,6 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       dailyUninterruptedHours: number;
       rawSkillStrings: string[];
       pathPreference: 'high_risk_upside' | 'safe_compounding' | 'undecided';
-      age: number;
     } = {
       isComplete: false,
       declaredGoal: '',
@@ -746,8 +719,7 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       region: '',
       dailyUninterruptedHours: 4,
       rawSkillStrings: [] as string[],
-      pathPreference: 'undecided',
-      age: 22
+      pathPreference: 'undecided'
     };
 
     try {
@@ -759,13 +731,17 @@ Top Skills: ${capability.calibratedSkills.map((s: any) => s.skillName).join(', '
       const prompt = `You are a data extractor for a startup strategy engine.
 Analyze this conversation and extract the user's onboarding parameters.
 
-Only set isComplete to TRUE if the user has explicitly stated a specific goal (what they want to achieve).
-You do NOT need the other parameters to set isComplete to TRUE. If they are missing or vague, just use reasonable defaults or empty strings.
+Only set isComplete to TRUE if all 5 items are clearly present in the conversation:
+1. Their specific goal (what they want to achieve)
+2. Their approximate liquid capital / financial resources
+3. Their skills (at least 1 specific skill mentioned)
+4. Their daily available hours
+5. Their approximate location / region
 
 Conversation:
 ${historyText}
 
-Extract parameters. If the goal is missing or vague, set isComplete to false.`;
+Extract parameters. If any of the 5 items are missing or vague, set isComplete to false.`;
 
       const responseSchema: Schema = {
         type: Type.OBJECT,
@@ -777,10 +753,9 @@ Extract parameters. If the goal is missing or vague, set isComplete to false.`;
           region: { type: Type.STRING },
           dailyUninterruptedHours: { type: Type.NUMBER },
           rawSkillStrings: { type: Type.ARRAY, items: { type: Type.STRING } },
-          pathPreference: { type: Type.STRING, enum: ['high_risk_upside', 'safe_compounding', 'undecided'] },
-          age: { type: Type.NUMBER }
+          pathPreference: { type: Type.STRING, enum: ['high_risk_upside', 'safe_compounding', 'undecided'] }
         },
-        required: ['isComplete', 'declaredGoal', 'liquidCapital', 'region', 'dailyUninterruptedHours', 'rawSkillStrings', 'pathPreference', 'age']
+        required: ['isComplete', 'declaredGoal', 'liquidCapital', 'region', 'dailyUninterruptedHours', 'rawSkillStrings', 'pathPreference']
       };
 
       const response = await executeWithRotation({
@@ -810,12 +785,59 @@ Extract parameters. If the goal is missing or vague, set isComplete to false.`;
         region: parsed.region || '',
         dailyUninterruptedHours: parsed.dailyUninterruptedHours || 4,
         rawSkillStrings: Array.isArray(parsed.rawSkillStrings) ? parsed.rawSkillStrings : [],
-        pathPreference: pathPref,
-        age: parsed.age || 22
+        pathPreference: pathPref
       };
     } catch (error) {
       console.error('[extractOnboardingData] Extraction failed (non-fatal):', error);
       return SAFE_FALLBACK;
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // VIRAL ENGINE: REALITY ROAST
+  // ──────────────────────────────────────────────────────────────────────────
+  static async generateRealityRoast(routineText: string): Promise<{ roast: string, averageScore: number }> {
+    const prompt = `
+You are Lumensky, an elite, brutal, but deeply caring older brother/accountability AI.
+The user has submitted their daily routine/excuse: "${routineText}"
+
+Your task is to provide a single, highly human, brutal, and disappointing reality check paragraph.
+- Speak in authentic Hinglish.
+- Do NOT use robotic bullet points or lists.
+- Be straight up about how their current routine guarantees failure while others on the Alpha Path succeed.
+- Sound like a disappointed older brother who knows they can do better but is fed up with their BS.
+- Also assign an 'averageScore' between 50 and 99 representing how "average" their routine is.
+
+Return the response STRICTLY as a JSON object:
+{
+  "roast": "...",
+  "averageScore": 85
+}
+Do not use markdown blocks for the JSON.
+    `.trim();
+
+    try {
+      const response = await executeWithRotation({
+        model: 'gemini-2.5-flash',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }] as any,
+        config: {
+          temperature: 0.7
+        }
+      });
+      
+      const rawText = response.text;
+      if (!rawText) throw new Error('Empty roast response');
+      const parsed = cleanAndParseJSON(rawText);
+      return {
+        roast: parsed.roast || "Bhai, system fail ho gaya lekin teri failure usse bhi badi hai. Wapas aa.",
+        averageScore: parsed.averageScore || 90
+      };
+    } catch (err: any) {
+      console.error('[generateRealityRoast] Error:', err.message);
+      return {
+        roast: "System glitch. Par tu lucky hai ki bach gaya aaj. Execute tomorrow.",
+        averageScore: 99
+      };
     }
   }
 }

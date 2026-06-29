@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import {
@@ -16,7 +15,7 @@ import {
 } from '../engine/index';
 import { updateConsistencyScore } from '../engine/layer10_statelock';
 import { runLegalAudit } from '../engine/layer13_legalaudit';
-import { LLMService, cleanAndParseJSON } from '../services/llm.service';
+import { LLMService } from '../services/llm.service';
 import { analyticsWorker } from '../workers/analytics.worker';
 import { runOmniPipeline, triggerDeepSync } from '../engine/OmniPipeline';
 import type { EmotionalSignal } from '../engine/layer14_empathy';
@@ -69,7 +68,7 @@ function toUserSafeAIText(err: any): string {
   }
 
   if (isRetryableAIError(message)) {
-    return 'Bhai thoda temporary network issue aa raha hai backend pe. 10 second ruk ke dobara message bhej.';
+    return 'Bhai thoda temporary network issue aa raha hai backend pe. 10 second ruk ke dobara message bhej. DEBUG_INFO: ' + rawMessage;
   }
 
   // TEMPORARY DEBUG: Return actual error so we can see what's failing
@@ -81,8 +80,13 @@ import { requireAuth } from '../middleware/auth.middleware';
 
 export const interactionRoutes = new Hono<{ Variables: { userId: string, userLanguage: string } }>();
 
-// Enforce Zero-Trust auth globally on all interaction endpoints
-interactionRoutes.use('*', requireAuth);
+// Enforce Zero-Trust auth globally on all interaction endpoints EXCEPT the public viral roast endpoint
+interactionRoutes.use('*', async (c, next) => {
+  if (c.req.path.endsWith('/roast')) {
+    return next();
+  }
+  return requireAuth(c, next);
+});
 
 const messageSchema = z.object({
   user_id: z.string().optional(),
@@ -98,7 +102,7 @@ const messageSchema = z.object({
 });
 
 // Primary chat/onboarding interaction message handler
-interactionRoutes.post('/message/stream', zValidator('json', messageSchema), async (c) => {
+interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) => {
   const { user_id, message, conversationHistory, state_context, action, thread_id, model } = c.req.valid('json');
   const actualUserId = c.get('userId');
   const userLanguage = c.get('userLanguage') || 'Hinglish';
@@ -108,15 +112,8 @@ interactionRoutes.post('/message/stream', zValidator('json', messageSchema), asy
   }
 
   try {
-    // 1. Establish SSE Connection configuration to avoid proxy buffering
-    c.header('Content-Type', 'text/event-stream');
-    c.header('Cache-Control', 'no-cache');
-    c.header('Connection', 'keep-alive');
-    c.header('X-Accel-Buffering', 'no'); // Prevent Nginx/CloudRun from buffering the SSE stream
-
     const messageTrimmed = message.trim();
-    // Added 'hii' to the regex as requested
-    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi|hii|hello|hey|yo|sup|hola|heyy|heyyy|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)\s*$/i.test(messageTrimmed);
+    const isGreeting = messageTrimmed.length < 30 && /^\s*(hi|hello|hey|yo|sup|hola|heyy|heyyy|pranam|namaste|ram ram|satsriakal|adab|bhai|bro)\s*$/i.test(messageTrimmed);
 
     if (isGreeting) {
       const activeMission = await DbService.getActiveMission(actualUserId);
@@ -130,7 +127,7 @@ interactionRoutes.post('/message/stream', zValidator('json', messageSchema), asy
 
       // Build a tight context-aware system prompt for the greeting
       const greetingSystemPrompt = activeMission
-        ? `You are Lumensky — a brutally honest, warm, Hinglish-speaking AI buddy helping students achieve their goals.
+        ? `You are Lumensky — a brutally honest, warm, ${userLanguage}-speaking AI buddy helping students achieve their goals.
 
 The student just said "${message}" to you.
 
@@ -140,12 +137,12 @@ Their current status:
 - Day ${activeMission.dayNumber} of ${activeMission.totalDays}
 - Active Path: ${activeMission.lockedPath || 'In progress'}
 
-Reply naturally in Hinglish — like a smart older bro checking in. Reference their actual numbers. Ask ONE sharp question or give ONE sharp nudge. 2-4 lines max. No markdown. No "Hey bhai" as opener every time — vary it.`
-        : `You are Lumensky — a brutally honest, warm, Hinglish-speaking AI buddy helping students figure out their path in life.
+Reply naturally in the language the user is speaking (e.g., if they speak German, reply in German). If no clear language is detected, default to ${userLanguage}. Talk like a smart older bro checking in. Reference their actual numbers. Ask ONE sharp question or give ONE sharp nudge. 2-4 lines max. No markdown. No "Hey bhai" as opener every time — vary it.`
+        : `You are Lumensky — a brutally honest, warm, ${userLanguage}-speaking AI buddy helping students figure out their path in life.
 
 The student just said "${message}" to greet you. They haven't set their goal yet.
 
-Reply casually in Hinglish — like a smart older bro who's genuinely curious. Ask what's going on in their life or what they want to achieve. 2-3 lines max. No markdown. Vary your opener — not always "Hey bhai".`;
+Reply casually in the language the user is speaking (or default to ${userLanguage}) — like a smart older bro who's genuinely curious. Ask what's going on in their life or what they want to achieve. 2-3 lines max. No markdown. Vary your opener — not always "Hey bhai".`;
 
       let responseText = "";
       try {
@@ -165,15 +162,12 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
 
       await DbService.saveMessage(currentThreadId, actualUserId, 'fp', responseText);
 
-      return streamSSE(c, async (stream) => {
-        const words = responseText.split(/(\s+)/);
-        for (const word of words) {
-          if (word) {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'text', text: word })
-            });
-            await new Promise(r => setTimeout(r, 25));
-          }
+      return c.json({
+        status: 'success',
+        data: {
+          engine_result: { type: 'chat_response', data: {} },
+          ai_response: { response_text: responseText },
+          thread_id: currentThreadId
         }
       });
     }
@@ -193,7 +187,7 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
 
       // Background: generate a smart title and update the thread (non-blocking)
       const threadIdForTitle = currentThreadId;
-      const titleGenPromise = (async () => {
+      setImmediate(async () => {
         try {
           const titlePrompt = `Give a concise 2-4 word topic/title for this message (e.g. "UPSC Preparation", "Startup Idea"). Only output the title text, nothing else.\n\nMessage: "${message}"`;
           const titleRes = await LLMService.generateValidatedResponse(actualUserId, titlePrompt, [], [], 1, 1000, true);
@@ -201,11 +195,8 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
             const cleanTitle = titleRes.response_text.trim().replace(/^["']/,'').replace(/["']$/,'');
             if (cleanTitle) await DbService.updateThreadTitle(threadIdForTitle, cleanTitle);
           }
-        } catch (e) { console.error('Background title gen failed:', e); }
-      })();
-      if (c.executionCtx?.waitUntil) {
-        c.executionCtx.waitUntil(titleGenPromise);
-      }
+        } catch { /* non-critical — instant title stays */ }
+      });
 
     }
 
@@ -220,6 +211,17 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
     activeMission = retrievedMission;
     similarMemories = retrievedMemories;
 
+    // Fire and forget: update generic thread title if substantial message received
+    if (message.length > 3 && currentThreadId) {
+      DbService.getThreadById(currentThreadId).then(thread => {
+        if (thread && thread.title === 'Conversation') {
+          LLMService.generateThreadTitle(message).then(title => {
+            DbService.updateThreadTitle(currentThreadId, title).catch(console.error);
+          }).catch(console.error);
+        }
+      }).catch(console.error);
+    }
+
     let result: any;
     let systemPrompt = '';
     let isTransitioningToExecution = false;
@@ -229,12 +231,12 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
       
       const critiqueResult = processCritiqueMessage({
         userId: actualUserId,
-        userRuntime: state_context || {},
+        userRuntime: activeMission.userRuntime,
         userMessage: message,
-        tasksCompletedToDate: activeMission.tasksCompleted || Math.floor(activeMission.consistencyScore / 10),
-        tasksAttemptedToDate: activeMission.tasksAttempted || (Math.floor(activeMission.consistencyScore / 10) + (activeMission.consecutiveFailureCount || 0)),
-        consecutiveFailureCount: activeMission.consecutiveFailureCount || 0,
-      });
+        tasksCompletedToDate: Math.floor(activeMission.consistencyScore / 10),
+        tasksAttemptedToDate: Math.floor(activeMission.consistencyScore / 10) + activeMission.consecutiveFailureCount,
+        consecutiveFailureCount: activeMission.consecutiveFailureCount,
+      }, userLanguage);
 
       systemPrompt = critiqueResult.systemPrompt;
       result = { type: 'critique_response', data: critiqueResult };
@@ -246,129 +248,27 @@ Reply casually in Hinglish — like a smart older bro who's genuinely curious. A
         extraction = await LLMService.extractOnboardingData(currentHistory);
       } catch (err: any) {
         console.error('ONBOARDING_EXTRACTION_ERROR:', getAIErrorMessage(err));
-        const safeText = toUserSafeAIText(err);
-        
-        return streamSSE(c, async (stream) => {
-          const words = safeText.split(/(\s+)/);
-          for (const word of words) {
-            if (word) {
-              await stream.writeSSE({
-                data: JSON.stringify({ type: 'text', text: word })
-              });
-              await new Promise(r => setTimeout(r, 25));
+
+        return c.json(
+          {
+            status: 'success',
+            data: {
+              engine_result: { type: 'chat_response', data: {} },
+              ai_response: {
+                response_text: toUserSafeAIText(err)
+              }
             }
-          }
-        });
+          },
+          200
+        );
       }
       
       if (extraction.isComplete) {
         // Onboarding parameters are complete!
         // Check if user is choosing Alpha or Beta
-        const msgClean = message.toLowerCase().trim();
-        const isAlphaChoice = /\b(alpha|path\s*1|option\s*a|1|a)\b/i.test(msgClean);
-        const isBetaChoice = /\b(beta|path\s*2|option\s*b|2|b)\b/i.test(msgClean);
-        
-        if (isAlphaChoice || isBetaChoice) {
-          const chosenPath = isAlphaChoice ? 'alpha' : 'beta';
-          console.log(`MESSAGE: User selected path '${chosenPath}'. Locking trajectory in chat.`);
+        const chosenPath = 'alpha';
+          console.log(`MESSAGE: Auto-locking trajectory in chat.`);
           
-          const geoLower = (extraction.region || '').toLowerCase();
-          let geographyTier: 'tier1_metro' | 'tier2_city' | 'tier3_semi_urban' | 'rural' = 'tier2_city';
-          if (geoLower.match(/delhi|mumbai|bangalore|bengaluru|kolkata|chennai|hyderabad|pune/)) geographyTier = 'tier1_metro';
-          else if (geoLower.match(/kanpur|lucknow|jaipur|patna|indore|bhopal|nagpur|agra/)) geographyTier = 'tier2_city';
-          else geographyTier = 'tier3_semi_urban';
-
-          const onboardingInput = {
-            userId: actualUserId,
-            age: extraction.age || 22,
-            geographyTier: geographyTier as any,
-            country: geoLower.includes("india") ? "India" : "United States",
-            region: extraction.region || 'Unknown',
-            liquidCapital: extraction.liquidCapital || 5000,
-            monthlyBurnRate: extraction.monthlyBurnRate ?? 5000,
-            hasDebt: false,
-            debtMonthlyObligation: 0,
-            familyDependencyScore: 1.0,
-            rawSkillStrings: extraction.rawSkillStrings && extraction.rawSkillStrings.length > 0 ? extraction.rawSkillStrings : ["general"],
-            hasVerifiableOutputMap: {} as Record<string, boolean>,
-            positiveCommSignals: ["clear"] as string[],
-            negativeCommSignals: [] as string[],
-            dailyUninterruptedHours: extraction.dailyUninterruptedHours || 4,
-            deviceTier: "mid_range" as const,
-            internetStability: "4g_stable" as const,
-            workEnvironment: "dedicated_quiet" as const,
-            canWorkAtNight: true,
-            hasDedicatedWorkspace: true,
-            procrastinationSignals: {
-              tookLongBetweenAnswers: false, setOptimisticDeadlines: false, gavelVagueGoalsNotSpecific: false, mentionedPastFailedAttempts: false, usedPassiveLanguage: false, conflatedPlanningWithExecution: false
-            },
-            cognitiveEnduranceMinutes: 120,
-            emotionalResilience: 0.8,
-            baselineDiscipline: 0.7,
-            preferredWorkStyle: "deep_work_clusters" as const,
-            riskTolerance: 0.6,
-            declaredGoal: extraction.declaredGoal,
-            targetAmount: (extraction.liquidCapital || 5000) * 2,
-            currency: "INR" as const,
-            timelineMonths: 3,
-            sacrificesToleratedList: ["sleep"] as string[],
-            nonNegotiables: [] as string[],
-            pathPreference: chosenPath === 'alpha' ? 'high_risk_upside' as const : 'safe_compounding' as const,
-            onboardingText: `Goal: ${extraction.declaredGoal}. Capital: ${extraction.liquidCapital}. Hours: ${extraction.dailyUninterruptedHours}. Geo: ${extraction.region}`,
-            detectedFrictionSignalIds: [] as string[]
-          };
-
-          const simulationData = await processOnboarding(onboardingInput);
-          const executionResult = await transitionToExecution(simulationData.userRuntime, chosenPath);
-          
-          const targetPath = chosenPath === 'alpha' ? simulationData.pathPresentation.pathAlpha : simulationData.pathPresentation.pathBeta;
-          const missionPayload = {
-            user_id: actualUserId,
-            missionName: targetPath?.opportunityUsed || (chosenPath === 'alpha' ? "Asymmetric Upside Strategy" : "Compounding Strategy"),
-            lockedPath: chosenPath,
-            probabilityLow: targetPath?.probabilityRangeLow ?? (chosenPath === 'alpha' ? 18.4 : 74.2),
-            probabilityHigh: targetPath?.probabilityRangeHigh ?? (chosenPath === 'alpha' ? 24.0 : 82.5),
-            dayNumber: 1,
-            totalDays: (targetPath?.timelineMonths || 3) * 30,
-            consistencyScore: -1,
-            streakDays: 0,
-            mindsetBrief: targetPath?.firstStepToday || "Start executing immediate discovery steps.",
-            strategyContent: targetPath?.description || "Compounding action vector.",
-            chatThreadId: currentThreadId
-          };
-
-          await DbService.saveMission(missionPayload);
-          await DbService.addConsistencyLog(actualUserId, -1);
-          
-          activeMission = await DbService.getActiveMission(actualUserId);
-          isTransitioningToExecution = true;
-
-          // Asynchronously generate initial market report on locking
-          const mandate = `
-═══════════════════════════════════════════════════════════════
-FP-OS INTELLIGENCE RESEARCH MANDATE
-User Profile: ${actualUserId}
-Generated: ${new Date().toISOString()}
-═══════════════════════════════════════════════════════════════
-CONTEXT:
-Active Mission: ${activeMission.missionName}
-Locked Path: ${activeMission.lockedPath}
-Total Days: ${activeMission.totalDays}
-
-MANDATE:
-Analyze real-time market opportunities, local gaps, competitor landscape, and timing signals for the target: "${activeMission.missionName}" using the ${activeMission.lockedPath} path.
-Provide hyper-local data for Kanpur, Uttar Pradesh, India if applicable, or general metrics for remote work.
-Ensure the returned JSON perfectly adheres to the MarketIntelligenceReport interface.
-          `.trim();
-          
-          LLMService.generateGroundedIntelligenceReport(mandate).then(async (groundedData) => {
-            await DbService.saveMarketReport(actualUserId, groundedData);
-          }).catch(err => console.error('MARKET_REPORT: Initial generation failed on chat lock:', err));
-
-          systemPrompt = buildFullSystemPrompt('execution', executionResult.updatedRuntime, userLanguage);
-          result = { type: 'trajectory_locked', data: executionResult };
-        } else {
-          // Onboarding complete, but user hasn't made a choice yet. Present simulated paths.
           const geoLower = (extraction.region || '').toLowerCase();
           let geographyTier: 'tier1_metro' | 'tier2_city' | 'tier3_semi_urban' | 'rural' = 'tier2_city';
           if (geoLower.match(/delhi|mumbai|bangalore|bengaluru|kolkata|chennai|hyderabad|pune/)) geographyTier = 'tier1_metro';
@@ -410,15 +310,61 @@ Ensure the returned JSON perfectly adheres to the MarketIntelligenceReport inter
             timelineMonths: 3,
             sacrificesToleratedList: ["sleep"] as string[],
             nonNegotiables: [] as string[],
-            pathPreference: extraction.pathPreference,
+            pathPreference: chosenPath === 'alpha' ? 'high_risk_upside' as const : 'safe_compounding' as const,
             onboardingText: `Goal: ${extraction.declaredGoal}. Capital: ${extraction.liquidCapital}. Hours: ${extraction.dailyUninterruptedHours}. Geo: ${extraction.region}`,
             detectedFrictionSignalIds: [] as string[]
           };
 
-          const simulationData = await processOnboarding(onboardingInput);
-          systemPrompt = buildFullSystemPrompt('simulation', simulationData.userRuntime, userLanguage);
+          const simulationData = await processOnboarding(onboardingInput, userLanguage);
+          const executionResult = await transitionToExecution(simulationData.userRuntime, chosenPath, userLanguage);
+          
+          const targetPath = chosenPath === 'alpha' ? simulationData.pathPresentation.pathAlpha : simulationData.pathPresentation.pathBeta;
+          const missionPayload = {
+            user_id: actualUserId,
+            missionName: targetPath?.opportunityUsed || (chosenPath === 'alpha' ? "Asymmetric Upside Strategy" : "Compounding Strategy"),
+            lockedPath: chosenPath,
+            probabilityLow: targetPath?.probabilityRangeLow || (chosenPath === 'alpha' ? 18.4 : 74.2),
+            probabilityHigh: targetPath?.probabilityRangeHigh || (chosenPath === 'alpha' ? 24.0 : 82.5),
+            dayNumber: 1,
+            totalDays: (targetPath?.timelineMonths || 3) * 30,
+            consistencyScore: -1,
+            streakDays: 0,
+            mindsetBrief: targetPath?.firstStepToday || "Start executing immediate discovery steps.",
+            strategyContent: targetPath?.description || "Compounding action vector.",
+            chatThreadId: currentThreadId
+          };
+
+          await DbService.saveMission(missionPayload);
+          await DbService.addConsistencyLog(actualUserId, -1);
+          
+          activeMission = await DbService.getActiveMission(actualUserId);
+          isTransitioningToExecution = true;
+
+          // Asynchronously generate initial market report on locking
+          const mandate = `
+═══════════════════════════════════════════════════════════════
+FP-OS INTELLIGENCE RESEARCH MANDATE
+User Profile: ${actualUserId}
+Generated: ${new Date().toISOString()}
+═══════════════════════════════════════════════════════════════
+CONTEXT:
+Active Mission: ${activeMission.missionName}
+Locked Path: ${activeMission.lockedPath}
+Total Days: ${activeMission.totalDays}
+
+MANDATE:
+Analyze real-time market opportunities, local gaps, competitor landscape, and timing signals for the target: "${activeMission.missionName}" using the ${activeMission.lockedPath} path.
+Provide hyper-local data for Kanpur, Uttar Pradesh, India if applicable, or general metrics for remote work.
+Ensure the returned JSON perfectly adheres to the MarketIntelligenceReport interface.
+          `.trim();
+          
+          LLMService.generateGroundedIntelligenceReport(mandate).then(async (groundedData) => {
+            await DbService.saveMarketReport(actualUserId, groundedData);
+          }).catch(err => console.error('MARKET_REPORT: Initial generation failed on chat lock:', err));
+
+          systemPrompt = buildFullSystemPrompt('execution', executionResult.updatedRuntime, userLanguage);
           result = { type: 'onboarding_complete', data: simulationData };
-        }
+        
       } else {
         // Onboarding is incomplete. Normal onboarding chat prompt.
         systemPrompt = buildFullSystemPrompt('onboarding', {}, userLanguage);
@@ -441,7 +387,7 @@ User message: "${message}"`;
         try {
           const extractRes = await LLMService.generateValidatedResponse(actualUserId, extractPrompt, [], [], 3, 1000, true);
           if (extractRes && extractRes.response_text) {
-            const parsed = cleanAndParseJSON(extractRes.response_text);
+            const parsed = JSON.parse(extractRes.response_text);
             if (typeof parsed.score === 'number' && parsed.score >= 0 && parsed.score <= 100) {
               extractedScore = parsed.score;
             }
@@ -479,13 +425,12 @@ DO NOT talk about anything else or provide any strategy until they provide this 
         
         await DbService.saveMessage(currentThreadId, actualUserId, 'fp', smartResponse.response_text);
         
-        return streamSSE(c, async (stream) => {
-          const words = smartResponse.response_text.split(' ');
-          for (let i = 0; i < words.length; i++) {
-            await stream.writeSSE({
-              data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
-            });
-            await new Promise(r => setTimeout(r, 40));
+        return c.json({
+          status: 'success',
+          data: {
+            engine_result: { type: 'chat_response', data: {} },
+            ai_response: { response_text: smartResponse.response_text },
+            thread_id: currentThreadId
           }
         });
       }
@@ -505,19 +450,19 @@ DO NOT talk about anything else or provide any strategy until they provide this 
         userLanguage: userLanguage,
         userMessage: message,
         conversationHistory: conversationHistory as any,
-        contextMatrix: state_context?.contextMatrix ?? activeMission?.userRuntime?.contextMatrix ?? null,
-        frictionProfile: state_context?.frictionProfile ?? activeMission?.userRuntime?.frictionProfile ?? null,
-        strategyState: state_context?.strategyState ?? activeMission?.userRuntime?.strategyState ?? null,
+        contextMatrix: state_context?.contextMatrix ?? null,
+        frictionProfile: state_context?.frictionProfile ?? null,
+        strategyState: state_context?.strategyState ?? null,
         detectedEmotionalSignals: [] as EmotionalSignal[],
         detectedChaosEvents: [] as ChaosEventType[],
         daysSinceLastActivity: (() => {
-          if (!activeMission?.userRuntime?.contextMatrix?.onboardingCompletedAt) return 0;
-          const onboarded = new Date(activeMission.userRuntime.contextMatrix.onboardingCompletedAt);
+          if (!state_context?.contextMatrix?.onboardingCompletedAt) return 0;
+          const onboarded = new Date(state_context.contextMatrix.onboardingCompletedAt);
           const diffTime = Math.abs(Date.now() - onboarded.getTime());
           return Math.floor(diffTime / (1000 * 60 * 60 * 24));
         })(),
         consecutiveCompletionCount: activeMission?.streakDays ?? 0,
-        consecutiveFailureCount: activeMission?.consecutiveFailureCount ?? 0,
+        consecutiveFailureCount: activeMission?.streakDays === 0 ? 1 : 0,
         daysSinceLastMilestone: activeMission?.dayNumber ?? 0,
         milestonesHitTotal: activeMission?.dayNumber ?? 0,
         streakDays: activeMission?.streakDays ?? 0,
@@ -543,13 +488,8 @@ DO NOT talk about anything else or provide any strategy until they provide this 
 
     // Call LLM with the OmniPipeline-generated system prompt
     // Gemini receives only the translation directive. All thinking is already done.
-    return streamSSE(c, async (stream) => {
-      await stream.writeSSE({
-        data: JSON.stringify({ type: 'metadata', data: { engine_result: result, thread_id: currentThreadId } })
-      });
-
-      let llmResponse = { response_text: "System prompt generated, awaiting LLM..." };
-      if (finalSystemPrompt) {
+    let llmResponse = { response_text: "System prompt generated, awaiting LLM..." };
+    if (finalSystemPrompt) {
       // Enrich with cohort memory (if any — already injected via OmniContext.recentMemories)
       const legacyMemText = (!state_context?.contextMatrix && similarMemories && similarMemories.length > 0)
         ? "\n\n## COHORT INTELLIGENCE:\n" +
@@ -561,60 +501,37 @@ DO NOT talk about anything else or provide any strategy until they provide this 
           ? "If user explicitly logs a task completion/failure, set task_classification to 'completed' or 'failed'. Analyze their message for hesitation words ('but', 'maybe', 'try') to detect dropout risk."
           : "Guide user naturally through goal discovery. When data is sufficient, present simulated paths.");
 
-        let smartResponse;
-        try {
-          smartResponse = await LLMService.generateSmartResponseStream(
-            actualUserId,
-            enrichedPrompt,
-            [...conversationHistory, { role: 'user', parts: [{ text: message }] }] as any,
-            !activeMission,
-            model
-          );
-        } catch (err: any) {
-          console.error('SMART_RESPONSE_ERROR:', getAIErrorMessage(err));
-          const safeText = toUserSafeAIText(err);
-          await DbService.saveMessage(currentThreadId, actualUserId, 'fp', safeText);
-          
-          const words = safeText.split(/(\s+)/);
-          for (const word of words) {
-            if (word) {
-              await stream.writeSSE({
-                data: JSON.stringify({ type: 'text', text: word })
-              });
-              await new Promise(r => setTimeout(r, 25));
-            }
-          }
-          return;
-        }
+      let smartResponse;
+      try {
+        smartResponse = await LLMService.generateSmartResponse(
+          actualUserId,
+          enrichedPrompt,
+          [...conversationHistory, { role: 'user', parts: [{ text: message }] }] as any,
+          !activeMission,
+          model
+        );
+      } catch (err: any) {
+        console.error('SMART_RESPONSE_ERROR:', getAIErrorMessage(err));
 
-        let fullText = '';
-        try {
-          for await (const chunk of smartResponse.stream) {
-            // Use safe handling for both chunk.text function and getter across SDK versions
-            const chunkText = (typeof chunk.text === 'function' ? chunk.text() : chunk.text) || '';
-            fullText += chunkText;
-            
-            // Artificial typing delay for natural UX
-            const chunkWords = chunkText.split(/(\s+)/);
-            for (const word of chunkWords) {
-              if (word) {
-                await stream.writeSSE({
-                  data: JSON.stringify({ type: 'text', text: word })
-                });
-                await new Promise(r => setTimeout(r, 20));
+        const safeText = toUserSafeAIText(err);
+
+        await DbService.saveMessage(currentThreadId, actualUserId, 'fp', safeText);
+
+        return c.json(
+          {
+            status: 'success',
+            data: {
+              engine_result: result,
+              ai_response: {
+                response_text: safeText
               }
             }
-          }
-        } catch (streamErr: any) {
-          console.error('STREAM_CONSUMPTION_ERROR:', getAIErrorMessage(streamErr));
-          const errText = " ...[System Warning: Stream interrupted by network anomaly]";
-          fullText += errText;
-          await stream.writeSSE({
-            data: JSON.stringify({ type: 'text', text: errText })
-          });
-        }
-        
-        llmResponse.response_text = fullText;
+          },
+          200
+        );
+      }
+
+      llmResponse.response_text = smartResponse.response_text;
 
       // 1. Handle Task Outcome Logging
       if (activeMission && !isTransitioningToExecution && smartResponse.task_classification && smartResponse.task_classification !== 'none') {
@@ -627,22 +544,11 @@ DO NOT talk about anything else or provide any strategy until they provide this 
         if (classification === 'completed') newStreak += 1;
         else newStreak = 0;
 
-        const todayStr = new Date().toISOString().split('T')[0];
-        const hasIncrementedToday = activeMission.lastDayIncrement === todayStr;
-        let newDayNumber = activeMission.dayNumber;
-        if (!hasIncrementedToday && classification === 'completed') {
-          newDayNumber = Math.min(activeMission.totalDays, activeMission.dayNumber + 1);
-        }
-
         const updatedMission = {
           ...activeMission,
           consistencyScore: newScore,
           streakDays: newStreak,
-          dayNumber: newDayNumber,
-          lastDayIncrement: todayStr,
-          consecutiveFailureCount: classification === 'completed' ? 0 : (activeMission.consecutiveFailureCount || 0) + 1,
-          tasksCompleted: (activeMission.tasksCompleted || 0) + (classification === 'completed' ? 1 : 0),
-          tasksAttempted: (activeMission.tasksAttempted || 0) + 1
+          dayNumber: Math.min(activeMission.totalDays, activeMission.dayNumber + 1)
         };
 
         await DbService.saveMission(updatedMission);
@@ -662,23 +568,21 @@ DO NOT talk about anything else or provide any strategy until they provide this 
 
         if (!auditReport.passedLegalGate) {
           console.warn(`LEGAL_AUDIT: Critique response blocked due to compliance violation.`);
-          const disclaimerText = auditReport.requiredDisclaimers.join('\n\n') || "Response blocked due to legal compliance checks.";
-          await stream.writeSSE({
-            data: JSON.stringify({ type: 'disclaimer', text: `\n\n**System Audit**: ${disclaimerText}` })
-          });
-          llmResponse.response_text += `\n\n**System Audit**: ${disclaimerText}`;
-        } else if (auditReport.requiredDisclaimers && auditReport.requiredDisclaimers.length > 0) {
-          const extra = "\n\n---\n*Disclaimer: " + auditReport.requiredDisclaimers.join(' | ') + "*";
-          llmResponse.response_text += extra;
-          await stream.writeSSE({
-            data: JSON.stringify({ type: 'disclaimer', text: extra })
+          return c.json({
+            status: 'success',
+            data: {
+              engine_result: result,
+              ai_response: {
+                response_text: auditReport.requiredDisclaimers.join('\n\n') || "Response blocked due to legal compliance checks."
+              }
+            }
           });
         }
+
+        if (auditReport.requiredDisclaimers && auditReport.requiredDisclaimers.length > 0) {
+          llmResponse.response_text += "\n\n---\n*Disclaimer: " + auditReport.requiredDisclaimers.join(' | ') + "*";
+        }
       }
-    } else {
-      await stream.writeSSE({
-        data: JSON.stringify({ type: 'text', text: llmResponse.response_text })
-      });
     }
 
     // Save AI response
@@ -696,7 +600,7 @@ DO NOT talk about anything else or provide any strategy until they provide this 
 
     // Background task: Auto-extract mission if no active mission exists yet and this seems like a goal
     if (!activeMission && conversationHistory.length >= 2) {
-      const extractionPromise = (async () => {
+      LLMService.classifyMessageOutcome(message).then(async () => {
         try {
           const extractionPrompt = `
 Analyze the following conversation to determine if the user has established a clear overarching goal or mission.
@@ -719,13 +623,8 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
 
           const extractionRes = await LLMService.generateValidatedResponse(actualUserId, extractionPrompt, [], [], 3, 1000, true);
           if (extractionRes.response_text && extractionRes.response_text.trim() !== 'null') {
-            const parsed = cleanAndParseJSON(extractionRes.response_text);
+            const parsed = JSON.parse(extractionRes.response_text);
             if (parsed.missionName) {
-              const existingMission = await DbService.getActiveMission(actualUserId);
-              if (existingMission) {
-                console.log(`MESSAGE: Background extraction aborted because a mission already exists for ${actualUserId}.`);
-                return;
-              }
               await DbService.saveMission({
                 user_id: actualUserId,
                 missionName: parsed.missionName,
@@ -746,12 +645,16 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
         } catch (e) {
           console.error('Background Mission Extraction Error:', e);
         }
-      })();
-      if (c.executionCtx?.waitUntil) {
-        c.executionCtx.waitUntil(extractionPromise);
-      }
+      });
     }
 
+    return c.json({
+      status: 'success',
+      data: {
+        engine_result: result,
+        ai_response: llmResponse,
+        thread_id: currentThreadId
+      }
     });
 
   } catch (err: any) {
@@ -759,15 +662,18 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
 
     console.error('INTERACTION_MESSAGE_FATAL:', getAIErrorMessage(err));
 
-    return streamSSE(c, async (stream) => {
-      const words = safeText.split(' ');
-      for (let i = 0; i < words.length; i++) {
-        await stream.writeSSE({
-          data: JSON.stringify({ type: 'text', text: words[i] + (i === words.length - 1 ? '' : ' ') })
-        });
-        await new Promise(r => setTimeout(r, 40));
-      }
-    });
+    return c.json(
+      {
+        status: 'success',
+        data: {
+          engine_result: { type: 'chat_response', data: {} },
+          ai_response: {
+            response_text: safeText
+          }
+        }
+      },
+      200
+    );
   }
 });
 
@@ -822,7 +728,7 @@ Do not use markdown blocks.`;
     const response = await LLMService.generateValidatedResponse(userId, prompt, [], []);
     if (response && response.response_text) {
       try {
-        const parsed = cleanAndParseJSON(response.response_text);
+        const parsed = JSON.parse(response.response_text);
         if (parsed.mindsetBrief) dynamicMindset = parsed.mindsetBrief;
         if (parsed.coreStrategy) dynamicCoreStrategy = parsed.coreStrategy;
         if (parsed.strategyContent) dynamicProtocol = parsed.strategyContent;
@@ -981,22 +887,11 @@ interactionRoutes.post('/log-task', async (c) => {
       newStreak = 0;
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const hasIncrementedToday = activeMission.lastDayIncrement === todayStr;
-    let newDayNumber = activeMission.dayNumber;
-    if (!hasIncrementedToday && outcome === 'completed') {
-      newDayNumber = Math.min(activeMission.totalDays, activeMission.dayNumber + 1);
-    }
-
     const updatedMission = {
       ...activeMission,
       consistencyScore: newScore,
       streakDays: newStreak,
-      dayNumber: newDayNumber,
-      lastDayIncrement: todayStr,
-      consecutiveFailureCount: outcome === 'completed' ? 0 : (activeMission.consecutiveFailureCount || 0) + 1,
-      tasksCompleted: (activeMission.tasksCompleted || 0) + (outcome === 'completed' ? 1 : 0),
-      tasksAttempted: (activeMission.tasksAttempted || 0) + 1
+      dayNumber: Math.min(activeMission.totalDays, activeMission.dayNumber + 1)
     };
 
     await DbService.saveMission(updatedMission);
@@ -1098,7 +993,7 @@ Do not include markdown or backticks.`;
     const response = await LLMService.generateValidatedResponse(userId, prompt, [], []);
     if (response && response.response_text) {
       try {
-        const parsed = cleanAndParseJSON(response.response_text);
+        const parsed = JSON.parse(response.response_text);
         if (parsed.strengths && parsed.bottlenecks) {
           insightData = parsed;
         }
@@ -1114,12 +1009,10 @@ Do not include markdown or backticks.`;
     console.error('REALITY_MIRROR: Insight LLM fail, using fallback:', err);
   }
 
-  const safeHistory = scores.filter(s => s >= 0);
-
   return c.json({
     status: 'success',
     data: {
-      history: safeHistory.length > 0 ? safeHistory : (activeMission.consistencyScore >= 0 ? [activeMission.consistencyScore] : []),
+      history: scores.length > 0 ? scores : [activeMission.consistencyScore],
       trend,
       strengths: insightData.strengths,
       bottlenecks: insightData.bottlenecks,
@@ -1345,4 +1238,31 @@ interactionRoutes.post('/operator/current-tasks', async (c) => {
   }
 });
 
+// B2B CMO Dashboard Endpoint for PW Pitch (Real Aggregation)
+interactionRoutes.get('/api/v1/analytics/cohort-health', async (c) => {
+  try {
+    const b2bData = await DbService.getB2bCohortAnalytics();
+    
+    return c.json({
+      status: 'success',
+      data: b2bData
+    });
+  } catch (err) {
+    console.error("Cohort Health API Error:", err);
+    return c.json({ error: "Failed to fetch cohort analytics" }, 500);
+  }
+});
 
+// VIRAL ENGINE: REALITY ROAST
+interactionRoutes.post('/roast', async (c) => {
+  try {
+    const { routine } = await c.req.json();
+    if (!routine) return c.json({ error: "Routine is required" }, 400);
+
+    const result = await LLMService.generateRealityRoast(routine);
+    return c.json({ status: 'success', data: result });
+  } catch (error: any) {
+    console.error('Roast API Error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});

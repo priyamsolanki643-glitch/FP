@@ -116,26 +116,7 @@ export class WebSocketService {
       }
     });
 
-    const interval = setInterval(() => {
-      this.wss?.clients.forEach((ws: WebSocket) => {
-        if ((ws as any).isAlive === false) {
-          return ws.terminate();
-        }
-        (ws as any).isAlive = false;
-        ws.ping();
-      });
-    }, 30000);
-
-    this.wss.on('close', () => {
-      clearInterval(interval);
-    });
-
     this.wss.on('connection', (ws: WebSocket, request: IncomingMessage, userId: string) => {
-      (ws as any).isAlive = true;
-      ws.on('pong', () => {
-        (ws as any).isAlive = true;
-      });
-
       console.log(`WS_SERVICE: Connection established for user: ${userId}`);
 
       const existing = this.clients.get(userId);

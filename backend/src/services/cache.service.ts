@@ -209,22 +209,6 @@ const omniContextCache = new LRUCache<OmniContext>(CACHE_MAX_USERS, OMNI_CONTEXT
 const rateLimitCache   = new LRUCache<number>(CACHE_MAX_USERS * 10, RATE_LIMIT_TTL_MS);
 
 const isRedisConfigured = !!process.env.REDIS_URL;
-let persistentRedisClient: any = null;
-
-async function getRedisClient() {
-  if (persistentRedisClient) return persistentRedisClient;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const redis = require('redis');
-    persistentRedisClient = redis.createClient({ url: process.env.REDIS_URL });
-    persistentRedisClient.on('error', (err: any) => console.error('[Cache] Redis Client Error', err));
-    await persistentRedisClient.connect();
-    return persistentRedisClient;
-  } catch (e) {
-    console.error('[Cache] Failed to initialize persistent Redis client:', e);
-    return null;
-  }
-}
 
 export class CacheService {
   // ─── OmniContext Operations ───────────────────────────────────────────────
@@ -322,9 +306,12 @@ export class CacheService {
 
   private static async redisGet<T>(key: string): Promise<T | null> {
     try {
-      const client = await getRedisClient();
-      if (!client) return null;
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const redis = require('redis');
+      const client = redis.createClient({ url: process.env.REDIS_URL });
+      await client.connect();
       const raw = await client.get(key);
+      await client.disconnect();
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
       console.error('[Cache] Redis GET failed, falling back to in-memory:', e);
@@ -334,12 +321,12 @@ export class CacheService {
 
   private static async redisSet<T>(key: string, value: T, ttlMs: number): Promise<void> {
     try {
-      const client = await getRedisClient();
-      if (client) {
-        await client.setEx(key, Math.floor(ttlMs / 1000), JSON.stringify(value));
-      } else {
-        omniContextCache.set(key, value as any);
-      }
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const redis = require('redis');
+      const client = redis.createClient({ url: process.env.REDIS_URL });
+      await client.connect();
+      await client.setEx(key, Math.floor(ttlMs / 1000), JSON.stringify(value));
+      await client.disconnect();
     } catch (e) {
       console.error('[Cache] Redis SET failed, falling back to in-memory:', e);
       omniContextCache.set(key, value as any);
@@ -348,10 +335,12 @@ export class CacheService {
 
   private static async redisDelete(key: string): Promise<void> {
     try {
-      const client = await getRedisClient();
-      if (client) {
-        await client.del(key);
-      }
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const redis = require('redis');
+      const client = redis.createClient({ url: process.env.REDIS_URL });
+      await client.connect();
+      await client.del(key);
+      await client.disconnect();
     } catch (e) {
       console.error('[Cache] Redis DELETE failed:', e);
     }

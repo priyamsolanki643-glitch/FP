@@ -115,7 +115,7 @@ export interface CritiqueInput {
 // Runs Mode 1 (Diagnostic) and Mode 2 (Tactical Architect) in sequence.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function processOnboarding(input: OnboardingInput): Promise<SimulationOutput> {
+export async function processOnboarding(input: OnboardingInput, userLanguage: string = 'Hinglish'): Promise<SimulationOutput> {
   // 1. Run Diagnostic Engine
   const diagnostic = runCircumstantialDiagnosis(input);
 
@@ -170,7 +170,7 @@ export async function processOnboarding(input: OnboardingInput): Promise<Simulat
     ambitionAssessment: architect.ambitionAssessment,
     socioEconomicGuardrail: architect.socioEconomicGuardrail,
     survivalModeResponse: diagnostic.survivabilityAudit.runwayBand === 'red' ? diagnostic.survivabilityAudit : null,
-    systemPrompt: buildFullSystemPrompt('simulation', userRuntime),
+    systemPrompt: buildFullSystemPrompt('simulation', userRuntime, userLanguage),
   };
 }
 
@@ -181,6 +181,7 @@ export async function processOnboarding(input: OnboardingInput): Promise<Simulat
 export async function transitionToExecution(
   runtime: UserRuntime,
   lockedPathId: string,
+  userLanguage: string = 'Hinglish'
 ): Promise<{ updatedRuntime: UserRuntime; systemPrompt: string; day1TaskSprint: TaskSprint }> {
   const selectedPath = runtime.availablePaths.find(p => p.pathId === lockedPathId);
   if (!selectedPath) {
@@ -221,7 +222,7 @@ export async function transitionToExecution(
 
   return {
     updatedRuntime,
-    systemPrompt: buildFullSystemPrompt('execution', updatedRuntime),
+    systemPrompt: buildFullSystemPrompt('execution', updatedRuntime, userLanguage),
     day1TaskSprint: day1Sprint,
   };
 }
@@ -235,6 +236,7 @@ export async function processTaskUpdate(
   matrix: ContextMatrix,
   capabilityVector: CapabilityVector,
   frictionProfile: FrictionProfile,
+  userLanguage: string = 'Hinglish'
 ): Promise<{
   updatedRuntime: UserRuntime;
   consistencyEvent: ConsistencyEvent;
@@ -250,7 +252,7 @@ export async function processTaskUpdate(
     failureDiagnostic: result.failureDiagnostic,
     nextDayTaskSprint: result.nextDayTaskSprint,
     milestoneGateResult: result.milestoneGateResult,
-    systemPrompt: result.systemPrompt,
+    systemPrompt: buildFullSystemPrompt(result.updatedRuntime.strategyState.status === 'locked' ? 'execution' : 'simulation', result.updatedRuntime, userLanguage),
   };
 }
 
@@ -258,7 +260,7 @@ export async function processTaskUpdate(
 // ENGINE ENTRY 4: PROCESS CRITIQUE MESSAGE (Critique wrapper)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function processCritiqueMessage(input: CritiqueInput): {
+export function processCritiqueMessage(input: CritiqueInput, userLanguage: string = 'Hinglish'): {
   responseType: string;
   engineResponse: string | null;
   systemPrompt: string;
@@ -272,6 +274,7 @@ export function processCritiqueMessage(input: CritiqueInput): {
     tasksCompletedToDate: input.tasksCompletedToDate,
     tasksAttemptedToDate: input.tasksAttemptedToDate,
     consecutiveFailureCount: input.consecutiveFailureCount,
+    userLanguage
   });
 }
 
@@ -279,7 +282,7 @@ export function processCritiqueMessage(input: CritiqueInput): {
 // ENGINE ENTRY 5: PROCESS UNLOCK REQUEST
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function processUnlockRequest(input: UnlockRequestInput): {
+export function processUnlockRequest(input: UnlockRequestInput, userLanguage: string = 'Hinglish'): {
   updatedRuntime: UserRuntime;
   validationResult: ReturnType<typeof validateUnlockRequest>;
   systemPrompt: string;
@@ -316,7 +319,7 @@ export function processUnlockRequest(input: UnlockRequestInput): {
   return {
     updatedRuntime,
     validationResult,
-    systemPrompt: buildFullSystemPrompt(stage, updatedRuntime),
+    systemPrompt: buildFullSystemPrompt(stage, updatedRuntime, userLanguage),
   };
 }
 

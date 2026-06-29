@@ -9,17 +9,45 @@ threadRoutes.use('*', requireAuth);
 threadRoutes.get('/', async (c) => {
   try {
     const userId = c.get('userId');
-    const query = c.req.query('q');
 
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const threads = await DbService.getChatThreads(userId, query);
+    const threads = await DbService.getChatThreads(userId);
     return c.json({ status: 'success', data: threads });
   } catch (error: any) {
     console.error('Fetch Threads Error:', error);
     return c.json({ error: 'Failed to fetch threads.' }, 500);
+  }
+});
+
+threadRoutes.post('/sync', async (c) => {
+  try {
+    const userId = c.get('userId');
+    if (!userId) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const body = await c.req.json();
+    const { title, messages } = body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return c.json({ error: 'Messages array is required.' }, 400);
+    }
+
+    const threadTitle = title || (messages.length > 0 ? messages[0].text?.substring(0, 40) + '...' : 'Anonymous Chat');
+    const thread = await DbService.createChatThread(userId, threadTitle);
+
+    for (const msg of messages) {
+      // role should be 'user' or 'fp', text should be the message content
+      await DbService.saveMessage(thread.id, userId, msg.role, msg.text);
+    }
+
+    return c.json({ status: 'success', threadId: thread.id });
+  } catch (error: any) {
+    console.error('Sync Thread Error:', error);
+    return c.json({ error: 'Failed to sync thread.' }, 500);
   }
 });
 

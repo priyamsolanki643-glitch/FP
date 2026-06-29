@@ -48,6 +48,7 @@ export async function processOperatorTaskUpdate(
   matrix: ContextMatrix,
   capabilityVector: CapabilityVector,
   frictionProfile: FrictionProfile,
+  userLanguage: string = 'Hinglish'
 ): Promise<OperatorOutput> {
   const { userRuntime, outcome, failureExplanation, reportedEarnings } = input;
   const currentState = userRuntime.strategyState;
@@ -68,8 +69,6 @@ export async function processOperatorTaskUpdate(
   } else if (outcome === 'failed') {
     newStreak = 0;
     consecutiveFailures += 1;
-  } else if (outcome === 'partial') {
-    newStreak = 0; // Partial breaks the strict streak, but doesn't increment consecutive failures
   }
 
   const consistencyEvent: ConsistencyEvent = {
@@ -96,7 +95,7 @@ export async function processOperatorTaskUpdate(
   }
 
   // 3. Recursive Neural Feedback: down-regulate capability V_c if failures build up
-  let updatedCapability: CapabilityVector = { ...capabilityVector };
+  let updatedCapability = { ...capabilityVector };
   let recalibrationOccurred = false;
   if (consecutiveFailures >= 2 && capabilityVector.trueCapabilityScore > 0.15) {
     // Reduce capability score by 15% dynamically due to execution failures
@@ -131,7 +130,7 @@ export async function processOperatorTaskUpdate(
   }
 
   // 6. Generate next day's task sprint
-  let nextDayTaskSprint: TaskSprint | null = null;
+  let nextDayTaskSprint = null;
   if (nextDayNumber <= currentState.totalTargetDays) {
     nextDayTaskSprint = await generateDailyTaskSprint(
       nextDayNumber,
@@ -171,7 +170,7 @@ export async function processOperatorTaskUpdate(
     failureDiagnostic,
     nextDayTaskSprint,
     milestoneGateResult,
-    systemPrompt: buildFullSystemPrompt('execution', updatedRuntime),
+    systemPrompt: buildFullSystemPrompt('execution', updatedRuntime, userLanguage),
     recalibrationOccurred,
   };
 }
@@ -186,6 +185,7 @@ export function processOperatorCritique(input: {
   tasksCompletedToDate: number;
   tasksAttemptedToDate: number;
   consecutiveFailureCount: number;
+  userLanguage?: string;
 }): {
   responseType: string;
   engineResponse: string | null;
@@ -193,16 +193,16 @@ export function processOperatorCritique(input: {
   consistencyDelta: number;
   dopamineLoopDetected: boolean;
 } {
-  const { userRuntime, userMessage, consecutiveFailureCount } = input;
+  const { userRuntime, userMessage, consecutiveFailureCount, userLanguage = 'Hinglish' } = input;
 
   // 1. Dopamine loop interceptor
   const dopamineCheck = detectDopamineLoop(userMessage);
   if (dopamineCheck.isDopamineLoop && dopamineCheck.confidence > 0.5) {
-    const customPrompt = `Dopamine seeking detected. Direct them back to task execution calmly but firmly. Reference task: "${userRuntime.currentTaskSprint?.tasks[0]?.title || 'Daily targets'}".`;
+    const customPrompt = `Dopamine seeking detected. Direct them back to task execution immediately. Do not lecture on morality. Reference task: "${userRuntime.currentTaskSprint?.tasks[0]?.title || 'Daily targets'}".`;
     return {
       responseType: 'dopamine_loop_interrupt',
-      engineResponse: `Tu phir se execution chhod kar planning aur theories me lag gaya hai. Ye dopamine seeking behavior tera time waste kar raha hai. Abhi focus is task par rakh: "${userRuntime.currentTaskSprint?.tasks[0]?.title || 'Daily sprint task'}". Ise complete kar, uske baad baatein karenge.`,
-      systemPrompt: buildFullSystemPrompt('critique', userRuntime),
+      engineResponse: `Dopamine seeking detected. Theoretical discussions do not advance consistency. Reference current task: "${userRuntime.currentTaskSprint?.tasks[0]?.title || 'Daily sprint task'}". Log completion or execute.`,
+      systemPrompt: buildFullSystemPrompt('critique', userRuntime, userLanguage),
       consistencyDelta: 0,
       dopamineLoopDetected: true,
     };
@@ -223,9 +223,8 @@ export function processOperatorCritique(input: {
     if (looksLikeUnlockAttempt) {
       return {
         responseType: 'state_lock_enforcement',
-        engineResponse: `State Lock active hai. Strategy abhi aise hi randomly change nahi hogi. 
-Agar tujhe sach me koi genuine blocker (technical issue ya external dependency) aa raha hai, toh specific reason bata. Varna pehle execution track record build kar. Bina action ke path badalna sirf aalas hai. Back to work.`,
-        systemPrompt: buildFullSystemPrompt('critique', userRuntime),
+        engineResponse: `Strategy change request rejected. Strategy remains locked. If you have encountered a genuine external blocker (technical error, dependency failure), please provide the specific error or data. Otherwise, continue execution.`,
+        systemPrompt: buildFullSystemPrompt('critique', userRuntime, userLanguage),
         consistencyDelta: 0,
         dopamineLoopDetected: false,
       };
@@ -242,7 +241,7 @@ Agar tujhe sach me koi genuine blocker (technical issue ya external dependency) 
     return {
       responseType: 'reality_check',
       engineResponse: realityCheck,
-      systemPrompt: buildFullSystemPrompt('critique', userRuntime),
+      systemPrompt: buildFullSystemPrompt('critique', userRuntime, userLanguage),
       consistencyDelta: 0,
       dopamineLoopDetected: false,
     };
@@ -252,7 +251,7 @@ Agar tujhe sach me koi genuine blocker (technical issue ya external dependency) 
   return {
     responseType: 'ai_generated',
     engineResponse: null,
-    systemPrompt: buildFullSystemPrompt('critique', userRuntime),
+    systemPrompt: buildFullSystemPrompt('critique', userRuntime, userLanguage),
     consistencyDelta: 0,
     dopamineLoopDetected: false,
   };
