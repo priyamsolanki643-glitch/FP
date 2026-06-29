@@ -9,12 +9,13 @@ threadRoutes.use('*', requireAuth);
 threadRoutes.get('/', async (c) => {
   try {
     const userId = c.get('userId');
+    const query = c.req.query('q');
 
     if (!userId) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const threads = await DbService.getChatThreads(userId);
+    const threads = await DbService.getChatThreads(userId, query);
     return c.json({ status: 'success', data: threads });
   } catch (error: any) {
     console.error('Fetch Threads Error:', error);

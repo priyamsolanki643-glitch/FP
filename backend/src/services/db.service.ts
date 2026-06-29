@@ -10,7 +10,7 @@ if (!supabaseUrl || !supabaseKey) {
   console.error('CRITICAL: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required.');
 }
 
-const isLocalFallback = process.env.NODE_ENV !== 'production' && (!supabaseUrl || !supabaseKey);
+const isLocalFallback = !supabaseUrl || !supabaseKey;
 
 let supabase: any = null;
 const fallbackFilePath = path.join(process.cwd(), 'database.json');
@@ -203,6 +203,8 @@ export class DbService {
   }
 
   static async getActiveMission(userId: string): Promise<any | null> {
+    if (userId.startsWith('anon_')) return null;
+
     if (isLocalFallback) {
       const data = readLocalDb();
       return data.missions.find((m) => m.user_id === userId) || null;
@@ -437,21 +439,52 @@ export class DbService {
       .eq('id', threadId);
   }
 
-  static async getChatThreads(userId: string): Promise<any[]> {
+  static async getThreadById(threadId: string): Promise<any> {
+    if (isLocalFallback) {
+      const data = readLocalDb();
+      return data.chat_threads.find((t: any) => t.id === threadId) || null;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('chat_threads')
+        .select('*')
+        .eq('id', threadId)
+        .single();
+      if (error) {
+        if (error.code === 'PGRST116') return null; // not found
+        console.error('getThreadById DB error:', error);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.error('getThreadById Exception:', err);
+      return null;
+    }
+  }
+
+  static async getChatThreads(userId: string, query?: string): Promise<any[]> {
     if (userId.startsWith('anon_')) return [];
 
     if (isLocalFallback) {
       const data = readLocalDb();
-      return data.chat_threads
-        .filter((t) => t.user_id === userId)
-        .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+      let threads = data.chat_threads.filter((t) => t.user_id === userId);
+      if (query) {
+        threads = threads.filter((t) => t.title.toLowerCase().includes(query.toLowerCase()));
+      }
+      return threads.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
     }
 
-    const { data, error } = await supabase
+    let queryBuilder = supabase
       .from('chat_threads')
       .select('*')
       .eq('user_id', userId)
       .order('updated_at', { ascending: false });
+
+    if (query) {
+      queryBuilder = queryBuilder.ilike('title', `%${query}%`);
+    }
+
+    const { data, error } = await queryBuilder;
 
     if (error) {
       console.error('getChatThreads DB error:', error);
@@ -470,18 +503,6 @@ export class DbService {
       );
       writeLocalDb(data);
       return true;
-    }
-
-    const { data: threadCheck, error: fetchErr } = await supabase
-      .from('chat_threads')
-      .select('id')
-      .eq('id', threadId)
-      .eq('user_id', userId)
-      .single();
-
-    if (fetchErr || !threadCheck) {
-      console.error('deleteChatThread validation error: Thread not found or not owned by user.', fetchErr);
-      return false;
     }
 
     const { error: msgError } = await supabase
