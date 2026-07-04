@@ -56,8 +56,12 @@ export default function B2BDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-6 sm:p-10 font-sans selection:bg-cyan-500/30">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#050505] text-white p-6 sm:p-10 font-sans selection:bg-cyan-500/30 relative overflow-hidden isolate">
+      {/* Ambient Trillion Dollar Glows */}
+      <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-cyan-600/10 blur-[120px] rounded-full pointer-events-none -z-10 mix-blend-screen" />
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-blue-600/10 blur-[100px] rounded-full pointer-events-none -z-10 mix-blend-screen" />
+
+      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
 
         {/* Header */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 pb-6 border-b border-white/5">
