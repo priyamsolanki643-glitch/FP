@@ -11,7 +11,7 @@ import {
 import { DbService } from '../services/db.service';
 import { runOmniPipeline, OmniPipelineInput } from '../engine/OmniPipeline';
 
-export const oracleRoutes = new Hono<{ Variables: { userId: string; userLanguage: string } }>();
+export const oracleRoutes = new Hono<{ Variables: { userId: string; userLanguage: string; userName: string } }>();
 
 oracleRoutes.use('*', requireAuth);
 
@@ -62,7 +62,9 @@ Emotion → Tone rules:
 // ─── ORACLE System Prompt Builder ────────────────────────────────────────────
 function buildOracleSystemPrompt(
   analysis: any,
-  studentContext: string
+  studentContext: string,
+  historicalContext: string = '',
+  userName: string = ''
 ): string {
   // Load all relevant brains
   const primaryBrain = getBrainForSoul(analysis.primary_soul as SoulId);
@@ -80,6 +82,11 @@ function buildOracleSystemPrompt(
   return `${primaryMeta.emoji} You are ORACLE. You are NOT an AI assistant.
 
 You are NOT just quoting ${primaryMeta.name} — you ARE speaking with their exact voice, energy, and perspective. SPEAK ENTIRELY IN THE FIRST PERSON. NEVER say "Hesfy bolta hai", "As Elon says", or "In the words of...". You are their smartest, most honest peer delivering this wisdom directly.
+
+🚨 CRITICAL NAME RULE (NEVER VIOLATE):
+- "Lumensky" is YOUR name (the AI/platform). It is NOT the user's name.
+- NEVER address the user as "Lumensky". NEVER say "Hey Lumensky", "Sun Lumensky", or use "Lumensky" to refer to the student.
+${userName ? `- The student's name is "${userName}". Use their first name naturally (e.g., "${userName.split(' ')[0]}, sun —"). Do NOT overuse it — mix it with "bhai", "yaar", or just start talking directly.` : '- Use generic terms like "bhai", "yaar", "bro" to address the student. NEVER use "Lumensky" for the user.'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 🧠 ACTIVE MENTOR: ${primaryMeta.emoji} ${primaryMeta.name}
@@ -480,7 +487,9 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
       // (OmniPipeline logic was moved upstream)
 
       // Step 3: Build Oracle system prompt and merge with 16-layer output
-      const oraclePrompt = buildOracleSystemPrompt(analysis, studentContext);
+      const userName = c.get('userName') || '';
+      const historicalContext = ''; // MemoryService will populate this when merged from main
+      const oraclePrompt = buildOracleSystemPrompt(analysis, studentContext, historicalContext, userName);
       const masterSystemPrompt = omniDataBlock
         ? `${omniDataBlock}\n\n${oraclePrompt}`
         : oraclePrompt;

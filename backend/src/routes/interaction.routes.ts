@@ -78,7 +78,7 @@ import { DbService } from '../services/db.service';
 import { VectorService } from '../services/vector.service';
 import { requireAuth } from '../middleware/auth.middleware';
 
-export const interactionRoutes = new Hono<{ Variables: { userId: string, userLanguage: string } }>();
+export const interactionRoutes = new Hono<{ Variables: { userId: string, userLanguage: string, userName: string } }>();
 
 // Enforce Zero-Trust auth globally on all interaction endpoints EXCEPT the public viral roast endpoint
 interactionRoutes.use('*', async (c, next) => {
@@ -106,6 +106,7 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
   const { user_id, message, conversationHistory, state_context, action, thread_id, model } = c.req.valid('json');
   const actualUserId = c.get('userId');
   const userLanguage = c.get('userLanguage') || 'Hinglish';
+  const userName = c.get('userName') || '';
 
   if (!actualUserId) {
     return c.json({ error: 'Unauthorized' }, 401);
@@ -125,9 +126,14 @@ interactionRoutes.post('/message', zValidator('json', messageSchema), async (c) 
 
       await DbService.saveMessage(currentThreadId, actualUserId, 'user', message);
 
-      // Build a tight context-aware system prompt for the greeting
+      const nameInstruction = userName 
+        ? `The student's name is "${userName}". Use their first name naturally. NEVER call them "Lumensky" — that is YOUR name (the AI), not theirs.`
+        : `Use "bhai", "yaar", or "bro" to address the student. NEVER call them "Lumensky" — that is YOUR name (the AI), not theirs.`;
+
       const greetingSystemPrompt = activeMission
         ? `You are Lumensky — a brutally honest, warm, ${userLanguage}-speaking AI buddy helping students achieve their goals.
+
+${nameInstruction}
 
 The student just said "${message}" to you.
 
@@ -139,6 +145,8 @@ Their current status:
 
 Reply naturally in the language the user is speaking (e.g., if they speak German, reply in German). If no clear language is detected, default to ${userLanguage}. Talk like a smart older bro checking in. Reference their actual numbers. Ask ONE sharp question or give ONE sharp nudge. 2-4 lines max. No markdown. No "Hey bhai" as opener every time — vary it.`
         : `You are Lumensky — a brutally honest, warm, ${userLanguage}-speaking AI buddy helping students figure out their path in life.
+
+${nameInstruction}
 
 The student just said "${message}" to greet you. They haven't set their goal yet.
 

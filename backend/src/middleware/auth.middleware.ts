@@ -1,7 +1,7 @@
 import { MiddlewareHandler } from 'hono';
 import { DbService } from '../services/db.service';
 
-export const requireAuth: MiddlewareHandler = async (c, next) => {
+export const requireAuth: MiddlewareHandler<{ Variables: { userId: string; userLanguage: string; userName: string } }> = async (c, next) => {
   const authHeader = c.req.header('Authorization');
   const anonId = c.req.header('X-Anonymous-Id');
   if (anonId && (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.includes('undefined'))) {
@@ -42,6 +42,10 @@ export const requireAuth: MiddlewareHandler = async (c, next) => {
     // Extract language from Supabase user_metadata if it exists
     const language = user.user_metadata?.preferred_language || 'Hinglish';
     c.set('userLanguage', language);
+
+    // Extract user's display name for AI personalization
+    const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || '';
+    c.set('userName', userName);
     
     await next();
   } catch (error: any) {
