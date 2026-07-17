@@ -7,6 +7,7 @@ export const requireAuth: MiddlewareHandler<{ Variables: { userId: string; userL
   if (anonId && (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.includes('undefined'))) {
     c.set('userId', `anon_${anonId}`);
     c.set('userLanguage', 'English');
+    c.set('userGender', 'Unknown');
     await next();
     return;
   }
@@ -39,13 +40,14 @@ export const requireAuth: MiddlewareHandler<{ Variables: { userId: string; userL
 
     c.set('userId', user.id);
     
-    // Extract language from Supabase user_metadata if it exists
+    // Extract language and gender from Supabase user_metadata if it exists
     const language = user.user_metadata?.preferred_language || 'Hinglish';
+    const gender = user.user_metadata?.gender || 'Unknown';
     c.set('userLanguage', language);
-
     // Extract user's display name for AI personalization
     const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || '';
     c.set('userName', userName);
+    c.set('userGender', gender);
     
     await next();
   } catch (error: any) {

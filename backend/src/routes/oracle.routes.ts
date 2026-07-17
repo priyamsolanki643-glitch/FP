@@ -11,7 +11,7 @@ import {
 import { DbService } from '../services/db.service';
 import { runOmniPipeline, OmniPipelineInput } from '../engine/OmniPipeline';
 
-export const oracleRoutes = new Hono<{ Variables: { userId: string; userLanguage: string; userName: string } }>();
+export const oracleRoutes = new Hono<{ Variables: { userId: string; userLanguage: string; userName: string; userGender: string } }>();
 
 oracleRoutes.use('*', requireAuth);
 
@@ -64,7 +64,8 @@ function buildOracleSystemPrompt(
   analysis: any,
   studentContext: string,
   historicalContext: string = '',
-  userName: string = ''
+  userName: string = '',
+  userGender: string = 'Unknown'
 ): string {
   // Load all relevant brains
   const primaryBrain = getBrainForSoul(analysis.primary_soul as SoulId);
@@ -133,11 +134,15 @@ This student is TRYING but breaking. They need a friend, not a drill sergeant.
 
 ---
 
-## LANGUAGE:
+## LANGUAGE & GENDER CONJUGATION (CRITICAL):
 - Default: Hinglish — natural Hindi-English mix ("Yaar sun," / "Bhai dekh," / "The thing is,")
 - Pure English message → pure English reply
 - Never sound like a translated bot. Sound native.
 - NEVER output timestamps [Sent: ...] — ignore them.
+- USER'S GENDER: ${userGender.toUpperCase()}
+- IF MALE: You MUST use male conjugations in Hindi/Hinglish (e.g., "tum karoge", "tu jayega", "bhai").
+- IF FEMALE: You MUST use female conjugations in Hindi/Hinglish (e.g., "tum karogi", "tu jayegi", "yaar/behen").
+- Misgendering the user ruins the mentor experience. Pay strict attention to verb endings.
 
 ## FORMAT (Claude-style, non-negotiable):
 - Open with 1 emoji matching the vibe
@@ -270,6 +275,7 @@ oracleRoutes.post('/chat/stream', zValidator('json', oracleSchema), async (c) =>
   return streamSSE(c, async (stream) => {
     try {
       const userLanguage = c.get('userLanguage') || 'Hinglish';
+      const userGender = c.get('userGender') || 'Unknown';
 
       // Step 1: Thread + DB ops (no AI calls yet)
       let currentThreadId = queryThreadId;
@@ -489,7 +495,7 @@ For example: {"response_text": "{\\"missionName\\":\\"My Goal\\", \\"lockedPath\
       // Step 3: Build Oracle system prompt and merge with 16-layer output
       const userName = c.get('userName') || '';
       const historicalContext = ''; // MemoryService will populate this when merged from main
-      const oraclePrompt = buildOracleSystemPrompt(analysis, studentContext, historicalContext, userName);
+      const oraclePrompt = buildOracleSystemPrompt(analysis, studentContext, historicalContext, userName, userGender);
       const masterSystemPrompt = omniDataBlock
         ? `${omniDataBlock}\n\n${oraclePrompt}`
         : oraclePrompt;
@@ -586,7 +592,9 @@ oracleRoutes.post('/chat', zValidator('json', oracleSchema), async (c) => {
 
   try {
     const analysis = await classifyMessage(message);
-    const systemPrompt = buildOracleSystemPrompt(analysis, studentContext);
+    const userName = c.get('userName') || '';
+    const userGender = c.get('userGender') || 'Unknown';
+    const systemPrompt = buildOracleSystemPrompt(analysis, studentContext, '', userName, userGender);
     const primaryMeta = SOUL_METADATA[analysis.primary_soul as SoulId] || SOUL_METADATA['VISIONARY'];
 
     const keys = (process.env.GEMINI_API_KEY || process.env.AI_PROVIDER_KEY || '')
